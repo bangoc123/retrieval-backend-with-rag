@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 import os
 import pymongo
 import google.generativeai as genai
-
+from flask_cors import CORS
 
 import pathlib
 import textwrap
@@ -23,8 +23,15 @@ GEMINI_KEY = os.getenv('GEMINI_KEY')
 genai.configure(api_key=GEMINI_KEY)
 model = genai.GenerativeModel('gemini-1.5-pro')
 
+client = pymongo.MongoClient(MONGODB_URI)
+db = client[DB_NAME] 
+collection = db[DB_COLLECTION]
+
+
 
 app = Flask(__name__)
+CORS(app)
+
 from sentence_transformers import SentenceTransformer
 
 # https://huggingface.co/thenlper/gte-large
@@ -66,8 +73,11 @@ def vector_search(user_query, collection, limit=4):
     project_stage = {
         "$project": {
             "_id": 0,  # Exclude the _id field
-            "body": 1,  # Include the plot field
             "title": 1,  # Include the title field
+            "product_specs": 1,
+            "color_options": 1,
+            "current_price": 1,
+            "product_promotion": 1,
             "score": {
                 "$meta": "vectorSearchScore"  # Include the search score
             }
@@ -78,17 +88,29 @@ def vector_search(user_query, collection, limit=4):
 
     # Execute the search
     results = collection.aggregate(pipeline)
+
     return list(results)
 
 def get_search_result(query, collection):
 
-    get_knowledge = vector_search(query, collection, 1)
+    get_knowledge = vector_search(query, collection, 4)
 
     search_result = ""
     for i, result in enumerate(get_knowledge):
-        search_result += f"Title: {result.get('title', 'N/A')}, Context: {result.get('body', 'N/A')}\n"
-        # search_result += f"{i + 1} Tên: {result.get('title', 'N/A')}"
-
+        print(result)
+        # search_result += f"Title: {result.get('title', 'N/A')}, Context: {result.get('body', 'N/A')}\n"
+        search_result = f"{i + 1}) Tên: {result.get('title', 'N/A')}"
+        
+        if result.get('current_price'):
+            search_result += f", Giá: {result.get('current_price')}"
+        else:
+            # Mock up data
+            # Retrieval model pricing from the internet.
+            search_result += f", Giá: 1 000 000 VND"
+        
+        if result.get('product_promotion'):
+            search_result += f", Ưu đãi: {result.get('product_promotion')}"
+    
     return search_result
 
 def get_embedding(text):
@@ -107,31 +129,26 @@ def to_markdown(text):
 @app.route('/api/search', methods=['POST'])
 def handle_query():
     data = request.get_json()
-    query = data.get('query')
+    query = data.get('content')
 
     if not query:
         return jsonify({'error': 'No query provided'}), 400
 
-    # Example response based on the query
-    clean_query = process_query(query)
-
     # Retrieve data from vector database
 
-    client = pymongo.MongoClient(MONGODB_URI)
-    db = client[DB_NAME] 
-    collection = db[DB_COLLECTION]
-
     source_information = get_search_result(query, collection)
-    combined_information = f"Hãy trở thành chuyên gia tư vấn bán hàng cho một cửa hàng điện thoại. Câu hỏi của khách hàng: {query}\nTrả lời câu hỏi dựa vào các thông tin sản phẩm dưới đây:\n{source_information}."
-    response = None
-    try:
-        response = model.generate_content(combined_information)
-    except Exception as e:
-        print('Error', e)
+    combined_information = f"Hãy trở thành chuyên gia tư vấn bán hàng cho một cửa hàng điện thoại. Câu hỏi của khách hàng: {query}\nTrả lời câu hỏi dựa vào các thông tin sản phẩm dưới đây: {source_information}."
+
+    chat = model.start_chat(history=[])
+
+    response = chat.send_message(combined_information)
+
+    for message in chat.history:
+        display(to_markdown(f'**{message.role}**: {message.parts[0].text}'))
+    
+
     return jsonify({'response': response.text})
 
-def process_query(query):
-    return query
 
 if __name__ == '__main__':
     app.run(debug=True)

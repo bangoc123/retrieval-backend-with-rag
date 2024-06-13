@@ -47,4 +47,4 @@ python server.py
 
 #### 4. Testing API
 
-![](https://storage.googleapis.com/mle-courses-prod/users/61b869ca9c3c5e00292bb42d/private-files/3bdfb6d0-2934-11ef-bde4-3b0f2c27b69f-448313592_7686331004756004_8786338308932114426_n.jpeg)
+![](https://storage.googleapis.com/mle-courses-prod/users/61b6fa1ba83a7e37c8309756/private-files/709ea4a0-298c-11ef-8393-319a26aa84a3-Screen_Shot_2024_06_13_at_20.54.17.png)
