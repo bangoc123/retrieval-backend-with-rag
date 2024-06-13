@@ -1,5 +1,5 @@
-### Vietnamese Retrieval Backend: RAG + MongoDB + Gemini 1.5 Pro
----
+# Vietnamese Retrieval Backend: RAG + MongoDB + Gemini 1.5 Pro
+
 
 This demo will be presented at Google I/O Extended HCMC 2024.
 
