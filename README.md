@@ -3,10 +3,13 @@
 
 This demo will be presented at Google I/O Extended HCMC 2024.
 
+[Slide](https://drive.google.com/file/d/1S4yVEKePiGQpvynEDuYHjY9hCyfkXikZ/view?usp=sharing)
+
 
 ![](https://storage.googleapis.com/mle-courses-prod/users/61b869ca9c3c5e00292bb42d/private-files/3a194420-2933-11ef-bde4-3b0f2c27b69f-Screen_Shot_2024_06_11_at_10.08.04_1200x990.png)
 
 ![](https://storage.googleapis.com/mle-courses-prod/users/61b869ca9c3c5e00292bb42d/private-files/ea30c3b0-2933-11ef-bde4-3b0f2c27b69f-Screen_Shot_2024_06_13_at_10.20.36.png)
+
 
 ### Set up
 
