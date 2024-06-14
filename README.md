@@ -53,7 +53,7 @@ Make sure you create a Vector Search Index. [Follow this video](https://youtu.be
 #### 4. Run server
 
 ```
-python server.py
+python serve.py
 ```
 
 #### 5. Testing API
