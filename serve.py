@@ -4,10 +4,8 @@ import os
 import pymongo
 import google.generativeai as genai
 from flask_cors import CORS
-
 import pathlib
 import textwrap
-
 from IPython.display import display
 from IPython.display import Markdown
 
@@ -27,14 +25,10 @@ client = pymongo.MongoClient(MONGODB_URI)
 db = client[DB_NAME] 
 collection = db[DB_COLLECTION]
 
-
-
 app = Flask(__name__)
 CORS(app)
 
 from sentence_transformers import SentenceTransformer
-
-# https://huggingface.co/thenlper/gte-large
 embedding_model = SentenceTransformer(EMBEDDING_MODEL)
 
 def vector_search(user_query, collection, limit=4):
@@ -61,25 +55,25 @@ def vector_search(user_query, collection, limit=4):
             "index": "vector_index",
             "queryVector": query_embedding,
             "path": "embedding",
-            "numCandidates": 150,  # Number of candidate matches to consider
-            "limit": limit  # Return top k matches
+            "numCandidates": 400,
+            "limit": limit,
         }
     }
 
     unset_stage = {
-        "$unset": "embedding"  # Exclude the 'embedding' field from the results
+        "$unset": "embedding" 
     }
 
     project_stage = {
         "$project": {
-            "_id": 0,  # Exclude the _id field
-            "title": 1,  # Include the title field
-            "product_specs": 1,
+            "_id": 0,  
+            "title": 1, 
+            # "product_specs": 1,
             "color_options": 1,
             "current_price": 1,
             "product_promotion": 1,
             "score": {
-                "$meta": "vectorSearchScore"  # Include the search score
+                "$meta": "vectorSearchScore"
             }
         }
     }
@@ -92,25 +86,24 @@ def vector_search(user_query, collection, limit=4):
     return list(results)
 
 def get_search_result(query, collection):
-
-    get_knowledge = vector_search(query, collection, 4)
-
+    get_knowledge = vector_search(query, collection, 10)
     search_result = ""
-    for i, result in enumerate(get_knowledge):
+    i = 0
+    for result in get_knowledge:
         print(result)
-        # search_result += f"Title: {result.get('title', 'N/A')}, Context: {result.get('body', 'N/A')}\n"
-        search_result = f"{i + 1}) Tên: {result.get('title', 'N/A')}"
-        
         if result.get('current_price'):
-            search_result += f", Giá: {result.get('current_price')}"
-        else:
-            # Mock up data
-            # Retrieval model pricing from the internet.
-            search_result += f", Giá: 1 000 000 VND"
-        
-        if result.get('product_promotion'):
-            search_result += f", Ưu đãi: {result.get('product_promotion')}"
-    
+            i += 1
+            search_result += f"\n {i}) Tên: {result.get('title')}"
+            
+            if result.get('current_price'):
+                search_result += f", Giá: {result.get('current_price')}"
+            else:
+                # Mock up data
+                # Retrieval model pricing from the internet.
+                search_result += f", Giá: Liên hệ để trao đổi thêm!"
+            
+            if result.get('product_promotion'):
+                search_result += f", Ưu đãi: {result.get('product_promotion')}"
     return search_result
 
 def get_embedding(text):
@@ -126,29 +119,29 @@ def to_markdown(text):
   text = text.replace('•', '  *')
   return Markdown(textwrap.indent(text, '> ', predicate=lambda _: True))
 
+
+def process_query(query):
+    return query.lower()
+
 @app.route('/api/search', methods=['POST'])
 def handle_query():
     data = request.get_json()
-    query = data.get('content')
+    query = process_query(data.get('content'))
 
     if not query:
         return jsonify({'error': 'No query provided'}), 400
 
     # Retrieve data from vector database
 
-    source_information = get_search_result(query, collection)
+    source_information = get_search_result(query, collection).replace('<br>', '\n')
     combined_information = f"Hãy trở thành chuyên gia tư vấn bán hàng cho một cửa hàng điện thoại. Câu hỏi của khách hàng: {query}\nTrả lời câu hỏi dựa vào các thông tin sản phẩm dưới đây: {source_information}."
 
-    chat = model.start_chat(history=[])
-
-    response = chat.send_message(combined_information)
-
-    for message in chat.history:
-        display(to_markdown(f'**{message.role}**: {message.parts[0].text}'))
+    response = model.generate_content(combined_information)
     
-
-    return jsonify({'response': response.text})
-
+    return jsonify({
+        'content': response.text,
+        'role': 'system'
+        })
 
 if __name__ == '__main__':
     app.run(debug=True)
