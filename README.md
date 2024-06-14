@@ -10,6 +10,7 @@ This demo will be presented at Google I/O Extended HCMC 2024.
 
 ![](https://storage.googleapis.com/mle-courses-prod/users/61b869ca9c3c5e00292bb42d/private-files/ea30c3b0-2933-11ef-bde4-3b0f2c27b69f-Screen_Shot_2024_06_13_at_10.20.36.png)
 
+![](https://storage.googleapis.com/mle-courses-prod/users/61b869ca9c3c5e00292bb42d/private-files/0e6926b0-2a05-11ef-bde4-3b0f2c27b69f-Screen_Shot_2024_06_14_at_11.04.23.png)
 
 ### Set up
 
@@ -39,12 +40,26 @@ GEMINI_KEY=
 - DB_COLLECTION: Name of the collection within the database.
 - GEMINI_KEY: Your key to access the Gemini API.
 
-#### 3. Run server
+#### 3. Data
+
+Prepare your data following the format below:
+
+![](https://storage.googleapis.com/mle-courses-prod/users/61b869ca9c3c5e00292bb42d/private-files/36777950-2a04-11ef-bde4-3b0f2c27b69f-Screen_Shot_2024_06_14_at_11.10.39.png)
+
+For this project, we are using MongoDB Atlas for Vector Search.
+
+Make sure you create a Vector Search Index. [Follow this video](https://youtu.be/jZ4hN4evesg?si=ZbXAMlQ4dsBQU_oI&t=2076).
+
+#### 4. Run server
 
 ```
 python server.py
 ```
 
-#### 4. Testing API
+#### 5. Testing API
 
 ![](https://storage.googleapis.com/mle-courses-prod/users/61b6fa1ba83a7e37c8309756/private-files/709ea4a0-298c-11ef-8393-319a26aa84a3-Screen_Shot_2024_06_13_at_20.54.17.png)
+
+Testing on web-app. [Link](https://github.com/bangoc123/protonx-ai-app-UI)
+
+![](https://storage.googleapis.com/mle-courses-prod/users/61b869ca9c3c5e00292bb42d/private-files/0e6926b0-2a05-11ef-bde4-3b0f2c27b69f-Screen_Shot_2024_06_14_at_11.04.23.png)
