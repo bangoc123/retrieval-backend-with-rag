@@ -16,6 +16,7 @@ EMBEDDING_MODEL = os.getenv('EMBEDDING_MODEL') or 'keepitreal/vietnamese-sbert'
 app = Flask(__name__)
 CORS(app)
 
+
 # Initialize RAG
 rag = RAG(
     mongodbUri=MONGODB_URI,

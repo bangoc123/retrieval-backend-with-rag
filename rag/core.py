@@ -1,8 +1,8 @@
 import pymongo
 import google.generativeai as genai
-from sentence_transformers import SentenceTransformer
 from IPython.display import Markdown
 import textwrap
+from embeddings import SentenceTransformerEmbedding, EmbeddingConfig
 
 class RAG():
     def __init__(self, 
@@ -16,7 +16,9 @@ class RAG():
         self.client = pymongo.MongoClient(mongodbUri)
         self.db = self.client[dbName] 
         self.collection = self.db[dbCollection]
-        self.embedding_model = SentenceTransformer(embeddingName)
+        self.embedding_model = SentenceTransformerEmbedding(
+            EmbeddingConfig(name=embeddingName)
+        )
 
         # config llm
         genai.configure(api_key=llmApiKey)
