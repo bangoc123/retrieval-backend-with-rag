@@ -9,7 +9,7 @@ load_dotenv()
 class OpenAIEmbedding(APIBaseEmbedding):
     def __init__(
             self,
-            name: str = "text-embedding-ada-002",
+            name: str = "text-embedding-3-small",
             dimensions: int = 768,
             token_limit: int = 8192,
             baseUrl: str = None,

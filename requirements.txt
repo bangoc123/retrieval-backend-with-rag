@@ -9,3 +9,5 @@ pydantic==2.7.4
 openai==1.35.3
 vertexai==1.49.0
 google-cloud-aiplatform==1.49.0
+mistralai
+fastembed==0.3.1
