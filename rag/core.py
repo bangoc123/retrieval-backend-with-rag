@@ -9,8 +9,7 @@ class RAG():
             mongodbUri: str,
             dbName: str,
             dbCollection: str,
-            llmApiKey: str,
-            llmName: str ='gemini-1.5-pro',
+            llm,
             embeddingName: str ='keepitreal/vietnamese-sbert',
         ):
         self.client = pymongo.MongoClient(mongodbUri)
@@ -19,10 +18,7 @@ class RAG():
         self.embedding_model = SentenceTransformerEmbedding(
             EmbeddingConfig(name=embeddingName)
         )
-
-        # config llm
-        genai.configure(api_key=llmApiKey)
-        self.llm = genai.GenerativeModel(llmName)
+        self.llm = llm
 
     def get_embedding(self, text):
         if not text.strip():
