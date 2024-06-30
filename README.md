@@ -1,4 +1,4 @@
-# Vietnamese Retrieval Backend: RAG + MongoDB + Gemini 1.5 Pro
+# Vietnamese Retrieval Backend: RAG + MongoDB + Gemini 1.5 Pro + Semantic Router
 
 
 This demo will be presented at Google I/O Extended HCMC 2024.
@@ -8,9 +8,24 @@ This demo will be presented at Google I/O Extended HCMC 2024.
 
 ![](https://storage.googleapis.com/mle-courses-prod/users/61b869ca9c3c5e00292bb42d/private-files/3a194420-2933-11ef-bde4-3b0f2c27b69f-Screen_Shot_2024_06_11_at_10.08.04_1200x990.png)
 
+#### Chatbot Architecture
+
+![](https://storage.googleapis.com/mle-courses-prod/users/61b6fa1ba83a7e37c8309756/private-files/5b7511a0-36c9-11ef-a9c5-539ef4fa11ba-Screen_Shot_2024_06_30_at_17.11.02.png)
+
+#### RAG Architecture
+
 ![](https://storage.googleapis.com/mle-courses-prod/users/61b869ca9c3c5e00292bb42d/private-files/ea30c3b0-2933-11ef-bde4-3b0f2c27b69f-Screen_Shot_2024_06_13_at_10.20.36.png)
 
+
+#### Chatbot is able to retrieve your product data and answer questions around it
+
 ![](https://storage.googleapis.com/mle-courses-prod/users/61b869ca9c3c5e00292bb42d/private-files/0e6926b0-2a05-11ef-bde4-3b0f2c27b69f-Screen_Shot_2024_06_14_at_11.04.23.png)
+
+
+#### Beyond that, with the help of the Semantic Router, the chatbot is able to follow chitchat conversations
+
+![](https://storage.googleapis.com/mle-courses-prod/users/61b6fa1ba83a7e37c8309756/private-files/3efb6050-36ca-11ef-a9c5-539ef4fa11ba-Screen_Shot_2024_06_30_at_16.57.11.png)
+
 
 ### Set up
 
