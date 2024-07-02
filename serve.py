@@ -61,8 +61,11 @@ def process_query(query):
 
 @app.route('/api/search', methods=['POST'])
 def handle_query():
-    data = request.get_json()
-    query = process_query(data.get('content'))
+    data = list(request.get_json())
+
+    query = data[-1]["parts"][0]["text"]
+
+    query = process_query(query)
 
     if not query:
         return jsonify({'error': 'No query provided'}), 400
@@ -72,17 +75,34 @@ def handle_query():
     guidedRoute = semanticRouter.guide(query)[1]
 
     if guidedRoute == PRODUCT_ROUTE_NAME:
+        # Decide to get new info or use previous info
         # Guide to RAG system
+        print("Guide to RAGs")
         source_information = rag.enhance_prompt(query).replace('<br>', '\n')
         combined_information = f"Hãy trở thành chuyên gia tư vấn bán hàng cho một cửa hàng điện thoại. Câu hỏi của khách hàng: {query}\nTrả lời câu hỏi dựa vào các thông tin sản phẩm dưới đây: {source_information}."
-        response = rag.generate_content(combined_information)
+        data.append({
+            "role": "user",
+            "parts": [
+                {
+                    "text": combined_information,
+                }
+            ]
+        })
+        response = rag.generate_content(data)
     else:
         # Guide to LLMs
-        response = llm.generate_content(query)
+        print("Guide to LLMs")
+        response = llm.generate_content(data)
+
+    # print('====data', data)
     
     return jsonify({
-        'content': response.text,
-        'role': 'system'
+        'parts': [
+            {
+            'text': response.text,
+            }
+        ],
+        'role': 'model'
         })
 
 if __name__ == '__main__':
