@@ -8,7 +8,8 @@ from embeddings import OpenAIEmbedding
 from semantic_router import SemanticRouter, Route
 from semantic_router.samples import productsSample, chitchatSample
 import google.generativeai as genai
-
+import openai
+from reflection import Reflection
 
 # Load environment variables from .env file
 load_dotenv()
@@ -22,6 +23,10 @@ OPEN_AI_KEY = os.getenv('OPEN_AI_KEY')
 OPEN_AI_EMBEDDING_MODEL = os.getenv('OPEN_AI_EMBEDDING_MODEL') or 'text-embedding-3-small'
 
 OpenAIEmbedding(OPEN_AI_KEY)
+
+
+
+
 
 # --- Semantic Router Setup --- #
 
@@ -42,6 +47,13 @@ genai.configure(api_key=LLM_KEY)
 llm = genai.GenerativeModel('gemini-1.5-pro')
 
 # --- End Set up LLMs --- #
+
+# --- Relection Setup --- #
+
+gpt = openai.OpenAI(api_key=OPEN_AI_KEY)
+reflection = Reflection(llm=gpt)
+
+# --- End Reflection Setup --- #
 
 app = Flask(__name__)
 CORS(app)
@@ -78,6 +90,13 @@ def handle_query():
         # Decide to get new info or use previous info
         # Guide to RAG system
         print("Guide to RAGs")
+
+        reflected_query = reflection(data)
+
+        # print('====query', query)
+        # print('reflected_query', reflected_query)
+
+        query = reflected_query
         source_information = rag.enhance_prompt(query).replace('<br>', '\n')
         combined_information = f"Hãy trở thành chuyên gia tư vấn bán hàng cho một cửa hàng điện thoại. Câu hỏi của khách hàng: {query}\nTrả lời câu hỏi dựa vào các thông tin sản phẩm dưới đây: {source_information}."
         data.append({
