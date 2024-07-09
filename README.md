@@ -1,16 +1,32 @@
-# Vietnamese Retrieval Backend: RAG + MongoDB + Gemini 1.5 Pro + Semantic Router
+# Vietnamese Retrieval Backend: RAG + MongoDB + Gemini 1.5 Pro + Semantic Router + Reflection
 
 
-This demo will be presented at Google I/O Extended HCMC 2024.
+This demo was presented at:
+- Google I/O Extended HCMC 2024
+- Google I/O Extended Hanoi 2024
 
-[Slide](https://drive.google.com/file/d/1S4yVEKePiGQpvynEDuYHjY9hCyfkXikZ/view?usp=sharing)
+and will presented at:
+- Google I/O Extended Surabaya 2024
 
 
-![](https://storage.googleapis.com/mle-courses-prod/users/61b869ca9c3c5e00292bb42d/private-files/3a194420-2933-11ef-bde4-3b0f2c27b69f-Screen_Shot_2024_06_11_at_10.08.04_1200x990.png)
+[Slide](https://drive.google.com/file/d/1HxTEHp4lV6i4C5F2ummqjFLXDnzPkaPX/view?usp=sharing)
+
+
+![](https://storage.googleapis.com/mle-courses-prod/users/61b869ca9c3c5e00292bb42d/private-files/dd582970-3da7-11ef-bf69-71eafa46c86b-Screen_Shot_2024_07_09_at_11.00.59.png)
+
+### Demo
+
+[Video Demo](https://youtu.be/zzN3FEuzVt4)
+
+[VTC1 featured us here](https://youtu.be/0ZOoPHcVZls)
+
+![](https://storage.googleapis.com/mle-courses-prod/users/61b869ca9c3c5e00292bb42d/private-files/60d0f8d0-3da9-11ef-bf69-71eafa46c86b-NMD05816.JPG)
+
+
 
 #### Chatbot Architecture
 
-![](https://storage.googleapis.com/mle-courses-prod/users/61b6fa1ba83a7e37c8309756/private-files/5b7511a0-36c9-11ef-a9c5-539ef4fa11ba-Screen_Shot_2024_06_30_at_17.11.02.png)
+![](https://storage.googleapis.com/mle-courses-prod/users/61b869ca9c3c5e00292bb42d/private-files/f8928780-3da7-11ef-a9c5-539ef4fa11ba-Screen_Shot_2024_07_09_at_11.01.45.png)
 
 #### RAG Architecture
 
