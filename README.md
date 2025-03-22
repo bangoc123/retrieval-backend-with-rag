@@ -20,7 +20,7 @@ and will presented at:
 
 [VTC1 featured us here](https://youtu.be/0ZOoPHcVZls)
 
-![](https://storage.googleapis.com/mle-courses-prod/users/61b869ca9c3c5e00292bb42d/private-files/60d0f8d0-3da9-11ef-bf69-71eafa46c86b-NMD05816.JPG)
+
 
 
 
