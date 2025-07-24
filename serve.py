@@ -25,6 +25,8 @@ OPEN_AI_EMBEDDING_MODEL = os.getenv('OPEN_AI_EMBEDDING_MODEL') or 'text-embeddin
 OpenAIEmbedding(OPEN_AI_KEY)
 
 # --- embedding setup --- # 
+# ---Open AI Setup--- #
+
 
 
 # --- Semantic Router Setup --- #
