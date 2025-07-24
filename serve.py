@@ -24,13 +24,12 @@ OPEN_AI_EMBEDDING_MODEL = os.getenv('OPEN_AI_EMBEDDING_MODEL') or 'text-embeddin
 
 OpenAIEmbedding(OPEN_AI_KEY)
 
-
-
+# --- embedding setup --- # 
 
 
 # --- Semantic Router Setup --- #
 
-PRODUCT_ROUTE_NAME = 'products'
+PRODUCT_ROUTE_NAME = 'products' # define products route name
 CHITCHAT_ROUTE_NAME = 'chitchat'
 
 openAIEmbeding = OpenAIEmbedding(apiKey=OPEN_AI_KEY, dimensions=1024, name=OPEN_AI_EMBEDDING_MODEL)
