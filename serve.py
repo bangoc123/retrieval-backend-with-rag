@@ -63,7 +63,7 @@ rag = RAG(
     mongodbUri=MONGODB_URI,
     dbName=DB_NAME,
     dbCollection=DB_COLLECTION,
-    embeddingName='keepitreal/vietnamese-sbert',
+    embeddingName='Alibaba-NLP/gte-multilingual-base',
     llm=llm,
 )
 
