@@ -2,3 +2,5 @@
 __pycache__
 
 venv/
+
+log_*.csv
