@@ -65,6 +65,7 @@ rag = RAG(
     # mongodbUri=MONGODB_URI,
     # dbName=DB_NAME,
     # dbCollection=DB_COLLECTION,
+    type='qdrant',
     qdrant_api=QDRANT_API,
     qdrant_url=QDRANT_URL,
     embeddingName='Alibaba-NLP/gte-multilingual-base',

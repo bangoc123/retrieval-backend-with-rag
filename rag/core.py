@@ -3,7 +3,7 @@ import google.generativeai as genai
 from IPython.display import Markdown
 import textwrap
 from embeddings import SentenceTransformerEmbedding, EmbeddingConfig
-from typing import Optional
+from typing import Optional, Literal
 from qdrant_client import QdrantClient, models
 from qdrant_client.http.models import Distance, VectorParams
 from qdrant_client import models, QdrantClient
@@ -11,6 +11,7 @@ from qdrant_client import models, QdrantClient
 class RAG():
     def __init__(self, 
             llm,
+            type: Literal['mongodb', 'qdrant'],
             mongodbUri: Optional[str] = None,
             qdrant_api: Optional[str] = None,
             qdrant_url: Optional[str] = None,
@@ -20,12 +21,13 @@ class RAG():
         ):
         self.mongo = False 
         self.qdrant = False
-        if mongodbUri != None:
+        self.type = type
+        if self.type == 'mongodb':
             self.client = pymongo.MongoClient(mongodbUri)
             self.db = self.client[dbName] 
             self.collection = self.db[dbCollection]
             self.mongo = True
-        if qdrant_api != None and qdrant_url != None:
+        if self.type == 'qdrant':
             self.qdrant_api = qdrant_api
             self.qdrant_url = qdrant_url
             self.qdrant_collection = embeddingName.split('/')[1]
@@ -75,7 +77,7 @@ class RAG():
             return "Invalid query or embedding generation failed."
 
         # Define the vector search pipeline
-        if self.qdrant == True:
+        if self.type == 'qdrant':
             if self._collection_exists:
                 # hits = self.client.query_points(
                 #     collection_name=self.qdrant_collection,
