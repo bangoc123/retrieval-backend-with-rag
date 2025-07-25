@@ -64,7 +64,7 @@ class RAG():
 
         project_stage = {
             "$project": {
-                "_id": 0,  
+                "_id": 1,  
                 "title": 1, 
                 # "product_specs": 1,
                 "color_options": 1,
