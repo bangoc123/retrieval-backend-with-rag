@@ -3,18 +3,37 @@ import google.generativeai as genai
 from IPython.display import Markdown
 import textwrap
 from embeddings import SentenceTransformerEmbedding, EmbeddingConfig
+from typing import Optional
+from qdrant_client import QdrantClient, models
+from qdrant_client.http.models import Distance, VectorParams
+from qdrant_client import models, QdrantClient
 
 class RAG():
     def __init__(self, 
-            mongodbUri: str,
-            dbName: str,
-            dbCollection: str,
             llm,
+            mongodbUri: Optional[str] = None,
+            qdrant_api: Optional[str] = None,
+            qdrant_url: Optional[str] = None,
+            dbName: Optional[str] = None,
+            dbCollection: Optional[str] = None,
             embeddingName: str ='keepitreal/vietnamese-sbert',
         ):
-        self.client = pymongo.MongoClient(mongodbUri)
-        self.db = self.client[dbName] 
-        self.collection = self.db[dbCollection]
+        self.mongo = False 
+        self.qdrant = False
+        if mongodbUri != None:
+            self.client = pymongo.MongoClient(mongodbUri)
+            self.db = self.client[dbName] 
+            self.collection = self.db[dbCollection]
+            self.mongo = True
+        if qdrant_api != None and qdrant_url != None:
+            self.qdrant_api = qdrant_api
+            self.qdrant_url = qdrant_url
+            self.qdrant_collection = embeddingName.split('/')[1]
+            self.client = QdrantClient(
+                            url=self.qdrant_url,
+                            api_key=self.qdrant_api
+                            ) 
+            self.qdrant = True
         self.embedding_model = SentenceTransformerEmbedding(
             EmbeddingConfig(name=embeddingName)
         )
@@ -27,12 +46,20 @@ class RAG():
         embedding = self.embedding_model.encode(text)
         return embedding.tolist()
 
+    def _collection_exists(self):           #check if qdrant collection is exist
+        try:
+            collections = self.client.get_collections().collections
+            collection_names = [col.name for col in collections]
+            return self.collection_name in collection_names
+        except Exception as e:
+            # print(f"Error checking collections: {type(e).__name__}: {e}")
+            return False
     def vector_search(
             self, 
             user_query: str, 
             limit=4):
         """
-        Perform a vector search in the MongoDB collection based on the user query.
+        Perform a vector search in the MongoDB collection or Qdrant collection based on the user query.
 
         Args:
         user_query (str): The user's query string.
@@ -48,40 +75,59 @@ class RAG():
             return "Invalid query or embedding generation failed."
 
         # Define the vector search pipeline
-        vector_search_stage = {
-            "$vectorSearch": {
-                "index": "vector_index",
-                "queryVector": query_embedding,
-                "path": "embedding",
-                "numCandidates": 400,
-                "limit": limit,
-            }
-        }
-
-        unset_stage = {
-            "$unset": "embedding" 
-        }
-
-        project_stage = {
-            "$project": {
-                "_id": 1,  
-                "title": 1, 
-                # "product_specs": 1,
-                "color_options": 1,
-                "current_price": 1,
-                "product_promotion": 1,
-                "score": {
-                    "$meta": "vectorSearchScore"
+        if self.qdrant == True:
+            if self._collection_exists:
+                # hits = self.client.query_points(
+                #     collection_name=self.qdrant_collection,
+                #     query=self.embedding_model.encode("user_query").tolist(),
+                #     limit=limit
+                # ).points
+                hits = self.client.search(
+                    collection_name=self.qdrant_collection,
+                    query_vector=self.embedding_model.encode(user_query).tolist(),
+                    limit=limit
+                )               
+                results = []
+                for hit in hits:
+                    results.append(hit.payload)
+                return results
+            else: 
+                print(f"Collection is not exist")
+        else:
+            vector_search_stage = {
+                "$vectorSearch": {
+                    "index": "vector_index",
+                    "queryVector": query_embedding,
+                    "path": "embedding",
+                    "numCandidates": 400,
+                    "limit": limit,
                 }
             }
-        }
 
-        pipeline = [vector_search_stage, unset_stage, project_stage]
+            unset_stage = {
+                "$unset": "embedding" 
+            }
 
-        # Execute the search
-        results = self.collection.aggregate(pipeline)
+            project_stage = {
+                "$project": {
+                    "_id": 0,  
+                    "title": 1, 
+                    # "product_specs": 1,
+                    "color_options": 1,
+                    "current_price": 1,
+                    "product_promotion": 1,
+                    "score": {
+                        "$meta": "vectorSearchScore"
+                    }
+                }
+            }
 
-        return list(results)
+            pipeline = [vector_search_stage, unset_stage, project_stage]
+
+            # Execute the search
+            results = self.collection.aggregate(pipeline)
+    
+            return list(results)
 
     def enhance_prompt(self, query):
         get_knowledge = self.vector_search(query, 10)
