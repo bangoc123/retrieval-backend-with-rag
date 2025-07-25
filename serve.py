@@ -21,6 +21,8 @@ LLM_KEY = os.getenv('GEMINI_KEY')
 EMBEDDING_MODEL = os.getenv('EMBEDDING_MODEL') or 'keepitreal/vietnamese-sbert'
 OPEN_AI_KEY = os.getenv('OPEN_AI_KEY')
 OPEN_AI_EMBEDDING_MODEL = os.getenv('OPEN_AI_EMBEDDING_MODEL') or 'text-embedding-3-small'
+QDRANT_API = os.getenv('QDRANT_API')
+QDRANT_URL = os.getenv('QDRANT_URL')
 
 OpenAIEmbedding(OPEN_AI_KEY)
 
@@ -60,9 +62,11 @@ CORS(app)
 
 # Initialize RAG
 rag = RAG(
-    mongodbUri=MONGODB_URI,
-    dbName=DB_NAME,
-    dbCollection=DB_COLLECTION,
+    # mongodbUri=MONGODB_URI,
+    # dbName=DB_NAME,
+    # dbCollection=DB_COLLECTION,
+    qdrant_api=QDRANT_API,
+    qdrant_url=QDRANT_URL,
     embeddingName='Alibaba-NLP/gte-multilingual-base',
     llm=llm,
 )
@@ -118,6 +122,7 @@ def handle_query():
         'parts': [
             {
             'text': response.text,
+            'context': source_information #TODO
             }
         ],
         'role': 'model'
