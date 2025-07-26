@@ -13,6 +13,10 @@ sys.path.append(project_root)
 
 from rag.core import RAG
 
+
+QDRANT_API = os.getenv('QDRANT_API')
+QDRANT_URL = os.getenv('QDRANT_URL')
+
 class HitAtKTest(unittest.TestCase):
 
     output_dir = os.path.join(project_root, 'test', 'unitTest', 'eval_dataset')
@@ -38,11 +42,14 @@ class HitAtKTest(unittest.TestCase):
         llm = genai.GenerativeModel('gemini-1.5-pro')
         
         cls.rag_instance = RAG(
-            mongodbUri=mongodb_uri,
-            dbName=db_name,
-            dbCollection=db_collection,
+            # mongodbUri=MONGODB_URI,
+            # dbName=DB_NAME,
+            # dbCollection=DB_COLLECTION,
+            type='qdrant',
+            qdrant_api=QDRANT_API,
+            qdrant_url=QDRANT_URL,
+            embeddingName='Alibaba-NLP/gte-multilingual-base',
             llm=llm,
-            embeddingName=embedding_model
         )
         
         try:
@@ -94,6 +101,9 @@ class HitAtKTest(unittest.TestCase):
                 try:
                     start_time = time.time()
                     search_results = self.rag_instance.vector_search(query, limit=1)
+                    
+                    print('--->search_results', search_results)
+                    
                     search_time = time.time() - start_time
                     
                     if search_results:
