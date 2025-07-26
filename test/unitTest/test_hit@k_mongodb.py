@@ -13,6 +13,7 @@ sys.path.append(project_root)
 
 from rag.core import RAG
 
+
 class HitAtKTest(unittest.TestCase):
 
     output_dir = os.path.join(project_root, 'test', 'unitTest', 'eval_dataset')
@@ -38,6 +39,7 @@ class HitAtKTest(unittest.TestCase):
         llm = genai.GenerativeModel('gemini-1.5-pro')
         
         cls.rag_instance = RAG(
+            type='mongodb',
             mongodbUri=mongodb_uri,
             dbName=db_name,
             dbCollection=db_collection,
@@ -94,6 +96,9 @@ class HitAtKTest(unittest.TestCase):
                 try:
                     start_time = time.time()
                     search_results = self.rag_instance.vector_search(query, limit=1)
+
+                    print('--->search_results', search_results)
+                    
                     search_time = time.time() - start_time
                     
                     if search_results:
