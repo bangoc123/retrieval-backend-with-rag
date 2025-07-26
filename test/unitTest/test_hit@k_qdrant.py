@@ -96,8 +96,6 @@ class HitAtKTest(unittest.TestCase):
                     start_time = time.time()
                     search_results = self.rag_instance.vector_search(query, limit=1)
                     
-                    print('--->search_results', search_results)
-                    
                     search_time = time.time() - start_time
                     
                     if search_results:
