@@ -1,0 +1,11 @@
+query_index,query,answer_expect
+1,1 + 1 bằng mấy?,2
+2,Màu của bầu trời là gì?,Xanh
+3,Tháng đầu tiên trong năm là gì?,Tháng Một
+4,Nước sôi ở bao nhiêu độ C?,100
+5,Con mèo kêu như thế nào?,Meo meo
+6,2 x 5 bằng mấy?,10
+7,Trái đất quay quanh gì?,Mặt trời
+8,Việt Nam ở châu lục nào?,Châu Á
+9,Số nguyên sau số 9 là gì?,10
+10,Mặt trăng xuất hiện vào ban ngày hay ban đêm?,Ban đêm
