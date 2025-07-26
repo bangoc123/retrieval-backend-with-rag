@@ -4,6 +4,14 @@
 
 ![Evaluation Framework](https://storage.googleapis.com/mle-courses-prod/users/61b6fa1ba83a7e37c8309756/private-files/b905f980-57e1-11f0-84e4-0f8a7a754383-Screenshot_2025_07_03_144533.png)
 
+Retrieval Benchmarks
+
+![Retrieval Benchmarks](https://storage.googleapis.com/mle-courses-prod/users/61b6fa1ba83a7e37c8309756/private-files/ffc9c650-5181-11f0-9c7a-bfa66305902b-output__2_.png)
+
+LLM Answer Benchmarks
+
+![LLM Answer Benchmarks](https://storage.googleapis.com/mle-courses-prod/users/61b6fa1ba83a7e37c8309756/private-files/7920b290-5315-11f0-84e4-0f8a7a754383-output.png)
+
 🔗 [Details](https://protonx.coursemind.io/courses/684d3a8bb224570012d03b22/topics/684f965f904b370012b6a553)
 
 ---
