@@ -4,3 +4,5 @@ __pycache__
 venv/
 
 log_*.csv
+
+func_test/
