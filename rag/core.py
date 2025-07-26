@@ -19,15 +19,12 @@ class RAG():
             dbCollection: Optional[str] = None,
             embeddingName: str ='keepitreal/vietnamese-sbert',
         ):
-        self.mongo = False 
-        self.qdrant = False
         self.type = type
         if self.type == 'mongodb':
             self.client = pymongo.MongoClient(mongodbUri)
             self.db = self.client[dbName] 
             self.collection = self.db[dbCollection]
-            self.mongo = True
-        if self.type == 'qdrant':
+        elif self.type == 'qdrant':
             self.qdrant_api = qdrant_api
             self.qdrant_url = qdrant_url
             self.qdrant_collection = embeddingName.split('/')[1]
@@ -35,7 +32,6 @@ class RAG():
                             url=self.qdrant_url,
                             api_key=self.qdrant_api
                             ) 
-            self.qdrant = True
         self.embedding_model = SentenceTransformerEmbedding(
             EmbeddingConfig(name=embeddingName)
         )
@@ -48,13 +44,16 @@ class RAG():
         embedding = self.embedding_model.encode(text)
         return embedding.tolist()
 
-    def _collection_exists(self):           #check if qdrant collection is exist
+    def _collection_exists(self):           
+        """
+        Check if Qdrant collection is exists
+        """
+
         try:
             collections = self.client.get_collections().collections
             collection_names = [col.name for col in collections]
             return self.collection_name in collection_names
         except Exception as e:
-            # print(f"Error checking collections: {type(e).__name__}: {e}")
             return False
     def vector_search(
             self, 
@@ -79,11 +78,6 @@ class RAG():
         # Define the vector search pipeline
         if self.type == 'qdrant':
             if self._collection_exists:
-                # hits = self.client.query_points(
-                #     collection_name=self.qdrant_collection,
-                #     query=self.embedding_model.encode("user_query").tolist(),
-                #     limit=limit
-                # ).points
                 hits = self.client.search(
                     collection_name=self.qdrant_collection,
                     query_vector=self.embedding_model.encode(user_query).tolist(),
@@ -95,7 +89,8 @@ class RAG():
                 return results
             else: 
                 print(f"Collection is not exist")
-        else:
+                return
+        elif self.type == 'mongodb':
             vector_search_stage = {
                 "$vectorSearch": {
                     "index": "vector_index",
