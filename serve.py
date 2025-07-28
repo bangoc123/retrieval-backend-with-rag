@@ -11,6 +11,7 @@ import google.generativeai as genai
 import openai
 from reflection import Reflection
 from re_rank import Reranker
+from llms.llms import LLMs
 
 # Load environment variables from .env file
 load_dotenv()
@@ -26,6 +27,11 @@ QDRANT_API = os.getenv('QDRANT_API')
 QDRANT_URL = os.getenv('QDRANT_URL')
 
 OpenAIEmbedding(OPEN_AI_KEY)
+
+MODEL_TYPE = os.getenv("MODEL_TYPE", "offline")
+MODEL_NAME = os.getenv("MODEL_NAME", "NousResearch/Meta-Llama-3-8B-Instruct")
+MODEL_ENGINE = os.getenv("MODEL_ENGINE", "vllm")
+MODEL_BASE_URL = os.getenv("MODEL_BASE_URL", None)
 
 # --- embedding setup --- # 
 
@@ -46,7 +52,9 @@ semanticRouter = SemanticRouter(openAIEmbeding, routes=[productRoute, chitchatRo
 # --- Set up LLMs --- #
 
 genai.configure(api_key=LLM_KEY)
-llm = genai.GenerativeModel('gemini-1.5-pro')
+# llm = genai.GenerativeModel('gemini-1.5-pro')
+llm = LLMs(type=MODEL_TYPE, model_name=MODEL_NAME, engine=MODEL_ENGINE, base_url=MODEL_BASE_URL)
+
 
 # --- End Set up LLMs --- #
 
@@ -108,11 +116,7 @@ def handle_query():
         combined_information = f"Hãy trở thành chuyên gia tư vấn bán hàng cho một cửa hàng điện thoại. Câu hỏi của khách hàng: {query}\nTrả lời câu hỏi dựa vào các thông tin sản phẩm dưới đây: {source_information}."
         data.append({
             "role": "user",
-            "parts": [
-                {
-                    "text": combined_information,
-                }
-            ]
+            "content": combined_information
         })
         response = rag.generate_content(data)
     else:
@@ -125,8 +129,7 @@ def handle_query():
     return jsonify({
         'parts': [
             {
-            'text': response.text,
-            'context': source_information #TODO
+            'text': response,
             }
         ],
         'role': 'model'
