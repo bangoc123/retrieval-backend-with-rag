@@ -79,15 +79,14 @@ def process_query(query):
 def handle_query():
     data = list(request.get_json())
 
-    query = data[-1]["parts"][0]["text"]
-
-    query = process_query(query)
+    reflected_query = reflection(data)
+    query = reflected_query
+    # query = data[-1]["parts"][0]["text"]
+    # query = process_query(query)
 
     if not query:
         return jsonify({'error': 'No query provided'}), 400
-    
-    # get last message
-    
+     
     guidedRoute = semanticRouter.guide(query)[1]
 
     if guidedRoute == PRODUCT_ROUTE_NAME:
@@ -95,12 +94,9 @@ def handle_query():
         # Guide to RAG system
         print("Guide to RAGs")
 
-        reflected_query = reflection(data)
+        # reflected_query = reflection(data)
+        # query = reflected_query
 
-        # print('====query', query)
-        # print('reflected_query', reflected_query)
-
-        query = reflected_query
         source_information = rag.enhance_prompt(query).replace('<br>', '\n')
         combined_information = f"Hãy trở thành chuyên gia tư vấn bán hàng cho một cửa hàng điện thoại. Câu hỏi của khách hàng: {query}\nTrả lời câu hỏi dựa vào các thông tin sản phẩm dưới đây: {source_information}."
         data.append({
