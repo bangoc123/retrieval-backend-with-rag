@@ -131,19 +131,32 @@ class RAG():
         enhanced_prompt = ""
         i = 0
         for result in get_knowledge:
-            if result.get('current_price'):
+            if result.get('title'):
                 i += 1
-                enhanced_prompt += f"\n {i}) Tên: {result.get('title')}"
-                
+                enhanced_prompt += f"\n{i}) Tên: {result.get('title')}"
+
+                # Price 
                 if result.get('current_price'):
                     enhanced_prompt += f", Giá: {result.get('current_price')}"
                 else:
-                    # Mock up data
-                    # Retrieval model pricing from the internet.
-                    enhanced_prompt += f", Giá: Liên hệ để trao đổi thêm!"
-                
+                    enhanced_prompt += f", Giá: Không có thông "
+                # Promotion
                 if result.get('product_promotion'):
-                    enhanced_prompt += f", Ưu đãi: {result.get('product_promotion')}"
+                    enhanced_prompt += f", Ưu đãi: {result['product_promotion']}"
+                else:
+                    enhanced_prompt += ", Ưu đãi: Không có thông tin"
+
+                # Specifications
+                if result.get('product_specs'):
+                    enhanced_prompt += f", Thông số: {result['product_specs']}"
+                else:
+                    enhanced_prompt += ", Thông số: Không có thông tin"
+
+                # Color options
+                if result.get('color_options'):
+                    enhanced_prompt += f", Màu sắc: {result['color_options']}"
+                else:
+                    enhanced_prompt += ", Màu sắc: Không có thông tin"
         return enhanced_prompt
 
     def generate_content(self, prompt):
