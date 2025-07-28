@@ -8,7 +8,7 @@ class LocalLLMs:
             **kwargs: arguments for vLLM.
         """
 
-    def _ollama_model(self, model_name: str):
+    def _initialize_ollama_model(self, model_name: str):
         """Pull the specified model from the Ollama server."""
     
     def _initialize_vllm_model(self, model_name: str, **kwargs):
