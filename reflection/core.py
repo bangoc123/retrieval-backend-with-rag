@@ -6,7 +6,10 @@ class Reflection():
         concatenatedTexts = []
         for entry in data:
             role = entry.get('role', '')
-            all_texts = ' '.join(part['text'] for part in entry['parts'])
+            if entry.get('parts'):
+                all_texts = ' '.join(part['text'] for part in entry['parts'] )
+            elif entry.get('content'):
+                all_texts = entry['content'] 
             concatenatedTexts.append(f"{role}: {all_texts} \n")
         return ''.join(concatenatedTexts)
 
