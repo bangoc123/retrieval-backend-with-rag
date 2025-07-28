@@ -32,7 +32,7 @@ LLM Answer Benchmarks
 
 #### Chatbot Architecture
 
-![Architecture](https://storage.googleapis.com/mle-courses-prod/users/61b869ca9c3c5e00292bb42d/private-files/f8928780-3da7-11ef-a9c5-539ef4fa11ba-Screen_Shot_2024_07_09_at_11.01.45.png)
+![Architecture](https://storage.googleapis.com/mle-courses-prod/users/61b6fa1ba83a7e37c8309756/private-files/40ec1270-6b89-11f0-8077-59248e41cdf6-Screenshot_2025-07-28_150209.png)
 
 #### The chatbot can retrieve your product data and answer related questions:
 
@@ -64,6 +64,10 @@ EMBEDDING_MODEL=
 DB_NAME=
 DB_COLLECTION=
 GEMINI_KEY=
+
+# If you are using Qdrant Cloud
+QDRANT_API=
+QDRANT_URL=
 ```
 
 * `MONGODB_URI`: Your MongoDB Atlas connection string.
@@ -71,6 +75,7 @@ GEMINI_KEY=
 * `DB_NAME`: Database name in MongoDB.
 * `DB_COLLECTION`: Collection name within the database.
 * `GEMINI_KEY`: API key for Gemini.
+* `QDRANT_API` and `QDRANT_URL`: Only needed if you’re using Qdrant Cloud.
 
 ---
 
@@ -142,3 +147,10 @@ Run a **specific test**:
 ```bash
 python ./test/integrationTest/llm-answer/test_bleu.py
 ```
+
+Current evaluation
+- Retrieval
+   - Hit@K
+- LLM Answer
+   - BLEU test
+   - ROUGE test
