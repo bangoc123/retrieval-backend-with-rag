@@ -10,6 +10,7 @@ from semantic_router.samples import productsSample, chitchatSample
 import google.generativeai as genai
 import openai
 from reflection import Reflection
+from re_rank import Reranker
 
 # Load environment variables from .env file
 load_dotenv()
@@ -71,7 +72,7 @@ rag = RAG(
     embeddingName='Alibaba-NLP/gte-multilingual-base',
     llm=llm,
 )
-
+reranker = Reranker(model_name="BAAI/bge-reranker-v2-m3")
 def process_query(query):
     return query.lower()
 
@@ -97,7 +98,13 @@ def handle_query():
         # reflected_query = reflection(data)
         # query = reflected_query
 
-        source_information = rag.enhance_prompt(query).replace('<br>', '\n')
+        # source_information = rag.enhance_prompt(query).replace('<br>', '\n')
+        passages = [passage['combined_information'] for passage in rag.vector_search(query)]
+        scores, ranked_passages = reranker(query, passages)
+        source_information = ""
+        for i in range(len(ranked_passages)):
+            source_information += f"{i+1} {ranked_passages}\n"
+
         combined_information = f"Hãy trở thành chuyên gia tư vấn bán hàng cho một cửa hàng điện thoại. Câu hỏi của khách hàng: {query}\nTrả lời câu hỏi dựa vào các thông tin sản phẩm dưới đây: {source_information}."
         data.append({
             "role": "user",
