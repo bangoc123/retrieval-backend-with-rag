@@ -1,4 +1,5 @@
 import requests
+import re
 class LocalLLMs:
     def __init__(self, engine: str, model_name: str, base_url: str = None):
         """ Initialize the LocalLLMs class 
@@ -10,6 +11,7 @@ class LocalLLMs:
         self.engine = engine
         self.model_name = model_name
         self.client = None
+        self.max_tokens = 4096  # Default max tokens
         if engine == "ollama":
             self.base_url = base_url 
             self._initialize_ollama_model(model_name)
@@ -31,15 +33,15 @@ class LocalLLMs:
             raise ConnectionError(f"Không thể kết nối đến máy chủ Ollama tại {self.base_url}. Vui lòng đảm bảo Ollama đang chạy. Lỗi: {e}")
 
     def _pull_ollama_model(self, model_name: str):
-        """Tải model từ Ollama nếu nó chưa tồn tại."""
+        """Pull model from Ollama if not exist."""
         try:
-            # 1. Kiểm tra xem model đã tồn tại chưa
+            # 1. Check if the model already exists
             response = self.client.get(f"{self.base_url}/api/tags")
             response.raise_for_status()
             models = response.json().get("models", [])
             model_exists = any(model_name in m["name"] for m in models)
 
-            # 2. Nếu chưa, thực hiện pull
+            # 2. If the model does not exist, pull it
             if not model_exists:
                 print(f"Model '{model_name}' chưa tồn tại. Bắt đầu tải...")
                 pull_data = {"name": model_name}
@@ -56,10 +58,29 @@ class LocalLLMs:
         try:
             response = requests.get(f"{self.base_url}/v1/models", timeout=10)
             response.raise_for_status()
+            models = response.json().get("data", [])
+            matched_model = next((m for m in models if m["id"] == self.model_name), None)
+
+            if matched_model:
+                self.max_tokens = matched_model.get("max_model_len", 4096)
+                print(f"Model '{self.model_name}' đã được tìm thấy với max_tokens: {self.max_tokens}.")
+            else:
+                print(f"Không tìm thấy model '{self.model_name}' trong danh sách model của vLLM. Dùng giá trị mặc định 4096.")
+
             print("Kết nối đến vLLM server thành công.")
             self.client = requests.Session()
         except requests.exceptions.RequestException as e:
             raise ConnectionError(f"Không thể kết nối đến vLLM tại {self.base_url}. Lỗi: {e}")
+    
+    def remove_think_blocks(self,text):
+        """Remove <think> blocks and their content from text"""
+        # Pattern to match <think>...</think> blocks (including multiline)
+        pattern = r'<think>.*?</think>'
+        # Remove the think blocks using re.sub with DOTALL flag for multiline matching
+        cleaned_text = re.sub(pattern, '', text, flags=re.DOTALL)
+        # Clean up any extra whitespace that might be left
+        cleaned_text = re.sub(r'\n\s*\n', '\n', cleaned_text).strip()
+        return cleaned_text
     
     def generate_content(self, prompt: str) -> str:
         """Generate content using the local LLM based on the provided prompt.
@@ -80,13 +101,14 @@ class LocalLLMs:
                 }
                 response = self.client.post(f"{self.base_url}/api/chat", json=payload)
                 response.raise_for_status()
-                return response.json()["message"]["content"].strip()
+                response_data = response.json()["message"]["content"].strip()
+                return self.remove_think_blocks(response_data)
 
             elif self.engine == 'vllm':
                 payload = {
                     "model": self.model_name,
                     "messages": prompt,
-                    "max_tokens": 64,
+                    "max_tokens": self.max_tokens,
                     "temperature": 0.7
                 }
                 response = self.client.post(
@@ -95,7 +117,8 @@ class LocalLLMs:
                     json=payload
                 )
                 response.raise_for_status()
-                return response.json()["choices"][0]["message"]["content"].strip()
+                response_data = response.json()["choices"][0]["message"]["content"].strip()
+                return self.remove_think_blocks(response_data)
         except Exception as e:
             print(f"Đã xảy ra lỗi trong quá trình tạo nội dung: {e}")
             raise

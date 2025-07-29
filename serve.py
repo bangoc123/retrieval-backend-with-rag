@@ -25,6 +25,7 @@ OPEN_AI_KEY = os.getenv('OPENAI_API_KEY')
 OPEN_AI_EMBEDDING_MODEL = os.getenv('OPEN_AI_EMBEDDING_MODEL') or 'text-embedding-3-small'
 QDRANT_API = os.getenv('QDRANT_API')
 QDRANT_URL = os.getenv('QDRANT_URL')
+TOGETHER_AI = os.getenv('TOGETHER_AI')
 
 OpenAIEmbedding(OPEN_AI_KEY)
 
@@ -36,8 +37,9 @@ MODEL_VERSION = os.getenv("MODEL_VERSION", None)
 if MODEL_TYPE == "online" and MODEL_NAME == "gemini":
     MODEL_API_KEY = LLM_KEY
 elif MODEL_TYPE == "online" and MODEL_NAME == "openai":
-    print("Using OpenAI API Key")
     MODEL_API_KEY = OPEN_AI_KEY
+elif MODEL_TYPE == "online" and MODEL_NAME == "together":
+    MODEL_API_KEY = TOGETHER_AI
 else:
     MODEL_API_KEY = None
 

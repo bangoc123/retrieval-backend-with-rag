@@ -9,7 +9,7 @@ class LLMs:
         if type == "offline":
             self.llm = LocalLLMs(engine=engine, model_name=model_name,base_url=base_url)
         elif type == "online":
-            self.llm = OnLineLLMs(model_name=model_name, api_key=api_key, model_version=model_version)
+            self.llm = OnLineLLMs(model_name=model_name, api_key=api_key, model_version=model_version, base_url=base_url)
         else:
             raise ValueError(f"Unsupported LLM type: {type}")
 
