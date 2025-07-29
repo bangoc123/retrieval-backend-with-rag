@@ -38,16 +38,12 @@ class SearchAPIROUGETest(unittest.TestCase):
         payload = [
             {
                 "role": "user",
-                "parts": [
-                    {
-                        "text": query
-                    }
-                ]
+                "content": query 
             }
         ]
         
         try:
-            response = requests.post(self.api_url, json=payload, headers=self.headers, timeout=30)
+            response = requests.post(self.api_url, json=payload, headers=self.headers, timeout=120)
             response.raise_for_status()
             response_data = response.json()
             

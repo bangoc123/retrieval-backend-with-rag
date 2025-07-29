@@ -11,6 +11,7 @@ import google.generativeai as genai
 import openai
 from reflection import Reflection
 from re_rank import Reranker
+from llms.llms import LLMs
 
 # Load environment variables from .env file
 load_dotenv()
@@ -20,12 +21,27 @@ DB_NAME = os.getenv('DB_NAME')
 DB_COLLECTION = os.getenv('DB_COLLECTION')
 LLM_KEY = os.getenv('GEMINI_KEY')
 EMBEDDING_MODEL = os.getenv('EMBEDDING_MODEL') or 'keepitreal/vietnamese-sbert'
-OPEN_AI_KEY = os.getenv('OPEN_AI_KEY')
+OPEN_AI_KEY = os.getenv('OPENAI_API_KEY')
 OPEN_AI_EMBEDDING_MODEL = os.getenv('OPEN_AI_EMBEDDING_MODEL') or 'text-embedding-3-small'
 QDRANT_API = os.getenv('QDRANT_API')
 QDRANT_URL = os.getenv('QDRANT_URL')
+TOGETHER_AI = os.getenv('TOGETHER_AI')
 
 OpenAIEmbedding(OPEN_AI_KEY)
+
+MODEL_TYPE = os.getenv("MODEL_TYPE", "offline")
+MODEL_NAME = os.getenv("MODEL_NAME", "NousResearch/Meta-Llama-3-8B-Instruct")
+MODEL_ENGINE = os.getenv("MODEL_ENGINE", None)
+MODEL_BASE_URL = os.getenv("MODEL_BASE_URL", None)
+MODEL_VERSION = os.getenv("MODEL_VERSION", None)
+if MODEL_TYPE == "online" and MODEL_NAME == "gemini":
+    MODEL_API_KEY = LLM_KEY
+elif MODEL_TYPE == "online" and MODEL_NAME == "openai":
+    MODEL_API_KEY = OPEN_AI_KEY
+elif MODEL_TYPE == "online" and MODEL_NAME == "together":
+    MODEL_API_KEY = TOGETHER_AI
+else:
+    MODEL_API_KEY = None
 
 # --- embedding setup --- # 
 
@@ -46,7 +62,9 @@ semanticRouter = SemanticRouter(openAIEmbeding, routes=[productRoute, chitchatRo
 # --- Set up LLMs --- #
 
 genai.configure(api_key=LLM_KEY)
-llm = genai.GenerativeModel('gemini-1.5-pro')
+# llm = genai.GenerativeModel('gemini-1.5-pro')
+llm = LLMs(type=MODEL_TYPE, model_name=MODEL_NAME, engine=MODEL_ENGINE, base_url=MODEL_BASE_URL, api_key=MODEL_API_KEY, model_version=MODEL_VERSION)
+
 
 # --- End Set up LLMs --- #
 
@@ -108,11 +126,7 @@ def handle_query():
         combined_information = f"Hãy trở thành chuyên gia tư vấn bán hàng cho một cửa hàng điện thoại. Câu hỏi của khách hàng: {query}\nTrả lời câu hỏi dựa vào các thông tin sản phẩm dưới đây: {source_information}."
         data.append({
             "role": "user",
-            "parts": [
-                {
-                    "text": combined_information,
-                }
-            ]
+            "content": combined_information
         })
         response = rag.generate_content(data)
     else:
@@ -125,8 +139,7 @@ def handle_query():
     return jsonify({
         'parts': [
             {
-            'text': response.text,
-            'context': source_information #TODO
+            'text': response,
             }
         ],
         'role': 'model'
