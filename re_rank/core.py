@@ -4,7 +4,7 @@ import numpy as np
 
 class Reranker():
     def __init__(self, model_name: str = "BAAI/bge-reranker-v2-m3"):
-        self.reranker = CrossEncoder(model_name)
+        self.reranker = CrossEncoder(model_name, trust_remote_code=True)
 
     def __call__(self, query: str, passages: list[str]) -> tuple[list[float], list[str]]:
         # Combine query and passages into pairs
