@@ -2,12 +2,12 @@ from llms.localLlms import LocalLLMs
 from llms.onlinesLlms import OnLineLLMs
 
 class LLMs:
-    def __init__(self, type : str, model_name : str, engine : str = None, api_key : str = None, model_version: str = None, base_url: str = None):
+    def __init__(self, type : str, model_version: str, model_name : str = None, engine : str = None, api_key : str = None, base_url: str = None):
         """Initialize object LocalLLMs or OnlineLLMs with the provided configuration.
             not return 
         """
         if type == "offline":
-            self.llm = LocalLLMs(engine=engine, model_name=model_name,base_url=base_url)
+            self.llm = LocalLLMs(engine=engine, model_version=model_version, base_url=base_url)
         elif type == "online":
             self.llm = OnLineLLMs(model_name=model_name, api_key=api_key, model_version=model_version, base_url=base_url)
         else:
