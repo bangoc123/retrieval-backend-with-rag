@@ -18,31 +18,18 @@ import warnings
 # Load environment variables from .env file
 load_dotenv()
 
-warnings.simplefilter("error")
+# Add custom exception
+class URLNotFoundError(Exception):
+    def __init__(self, name):
+        self.name = name 
+        super().__init__(f"Please make sure you have {name} base URL in .env")
 
-# Access the key
-MONGODB_URI = os.getenv('MONGODB_URI')
-DB_NAME = os.getenv('DB_NAME')
-DB_COLLECTION = os.getenv('DB_COLLECTION')
-LLM_KEY = os.getenv('GEMINI_KEY')
-
-QDRANT_API = os.getenv('QDRANT_API')
-QDRANT_URL = os.getenv('QDRANT_URL')
-TOGETHER_AI = os.getenv('TOGETHER_AI')
-
-
-
-
-
+class APINotFoundError(Exception):
+    def __init__(self, name):
+        self.name = name 
+        super().__init__(f"Please make sure you have {name} API key in .env")
 
 def main(args):
-
-    # --- embedding setup --- # 
-
-    OpenAIEmbedding(os.getenv('OPEN_AI_KEY'))
-
-    # --- embedding setup --- # 
-
 
     # --- Semantic Router Setup --- #
 
@@ -64,28 +51,30 @@ def main(args):
         MODEL_BASE_URL = None
 
         if not MODEL_API_KEY:
-            warnings.warn("Make sure you have GEMINI API key in .env")
+            raise APINotFoundError('GEMINI')
 
     elif args.mode == "online" and args.model_name == "openai":
         MODEL_API_KEY = os.getenv('OPENAI_API_KEY')
         MODEL_BASE_URL = None
 
         if not MODEL_API_KEY:
-            warnings.warn("Make sure you have OPENAI API key in .env")
+            raise APINotFoundError('OPENAI')
 
     elif args.mode == "online" and args.model_name == "together":
         MODEL_API_KEY = os.getenv('TOGETHER_API_KEY', None)
         MODEL_BASE_URL = os.getenv("MODEL_BASE_URL", None)
 
-        if (not MODEL_API_KEY) or (not MODEL_BASE_URL):
-            warnings.warn("Make sure you have TogetherAI API key and TogetherAI base url in .env")
+        if not MODEL_API_KEY:
+            raise APINotFoundError('TogetherAI')
+        if not MODEL_BASE_URL:
+            raise URLNotFoundError('TogetherAI')
 
     elif args.mode == "offline" and (args.model_engine == "ollama" or args.model_engine == "vllm"):
         MODEL_API_KEY = None
         MODEL_BASE_URL = os.getenv("MODEL_BASE_URL", None)
 
         if not MODEL_BASE_URL:
-            warnings.warn("Make sure you have Ollama base url in .env")
+            raise URLNotFoundError(f"{args.model_engine}")
 
     elif args.mode == "offline" and args.model_engine == None:
         MODEL_API_KEY = None
@@ -109,16 +98,16 @@ def main(args):
     if args.db == 'qdrant':
         rag = RAG(
             type='qdrant',
-            qdrant_api=QDRANT_API,
-            qdrant_url=QDRANT_URL,
+            qdrant_api=os.getenv('QDRANT_API'),
+            qdrant_url=os.getenv('QDRANT_URL'),
             embeddingName=args.embedding_model,
             llm=llm,
         )
     elif args.db == 'mongodb':
         rag = RAG(
-            mongodbUri=MONGODB_URI,
-            dbName=DB_NAME,
-            dbCollection=DB_COLLECTION,
+            mongodbUri=os.getenv('MONGODB_URI'),
+            dbName=os.getenv('DB_NAME'),
+            dbCollection=os.getenv('DB_COLLECTION'),
             embeddingName=args.embedding_model,
             llm=llm,
         )
