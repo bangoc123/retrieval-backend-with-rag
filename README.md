@@ -8,6 +8,10 @@ Retrieval Benchmarks
 
 ![Retrieval Benchmarks](https://storage.googleapis.com/mle-courses-prod/users/61b6fa1ba83a7e37c8309756/private-files/ffc9c650-5181-11f0-9c7a-bfa66305902b-output__2_.png)
 
+ReRank Benchmarks
+
+![Rerank Benchmarks](https://storage.googleapis.com/mle-courses-prod/users/61b869ca9c3c5e00292bb42d/private-files/b5d82990-6c63-11f0-8395-0df7dffeba85-average_ndcg_reranker_models_horizontal_sorted_1.png)
+
 LLM Answer Benchmarks
 
 ![LLM Answer Benchmarks](https://storage.googleapis.com/mle-courses-prod/users/61b6fa1ba83a7e37c8309756/private-files/7920b290-5315-11f0-84e4-0f8a7a754383-output.png)
