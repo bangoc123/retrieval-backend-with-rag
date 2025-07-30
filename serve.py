@@ -22,12 +22,17 @@ load_dotenv()
 class URLNotFoundError(Exception):
     def __init__(self, name):
         self.name = name 
-        super().__init__(f"Please make sure you have {name} base URL in .env")
+        super().__init__(f"Please make sure you have {name} in .env")
 
 class APINotFoundError(Exception):
     def __init__(self, name):
         self.name = name 
-        super().__init__(f"Please make sure you have {name} API key in .env")
+        super().__init__(f"Please make sure you have {name} in .env")
+
+class ValueNotFoundError(Exception):
+    def __init__(self, name):
+        self.name = name 
+        super().__init__(f"Please make sure you have {name} in .env")
 
 def main(args):
 
@@ -51,30 +56,37 @@ def main(args):
         MODEL_BASE_URL = None
 
         if not MODEL_API_KEY:
-            raise APINotFoundError('GEMINI')
+            raise APINotFoundError('GEMINI_API_KEY')
 
     elif args.mode == "online" and args.model_name == "openai":
         MODEL_API_KEY = os.getenv('OPENAI_API_KEY')
         MODEL_BASE_URL = None
 
         if not MODEL_API_KEY:
-            raise APINotFoundError('OPENAI')
+            raise APINotFoundError('OPENAI_API_KEY')
 
     elif args.mode == "online" and args.model_name == "together":
         MODEL_API_KEY = os.getenv('TOGETHER_API_KEY', None)
-        MODEL_BASE_URL = os.getenv("MODEL_BASE_URL", None)
+        MODEL_BASE_URL = os.getenv("TOGETHER_BASE_URL", None)
 
         if not MODEL_API_KEY:
-            raise APINotFoundError('TogetherAI')
+            raise APINotFoundError('TOGETHER_API_KEY')
         if not MODEL_BASE_URL:
-            raise URLNotFoundError('TogetherAI')
+            raise URLNotFoundError('TOGETHER_BASE_URL')
 
     elif args.mode == "offline" and (args.model_engine == "ollama" or args.model_engine == "vllm"):
         MODEL_API_KEY = None
-        MODEL_BASE_URL = os.getenv("MODEL_BASE_URL", None)
+        MODEL_BASE_URL = os.getenv("OLLAMA_BASE_URL", None)
 
         if not MODEL_BASE_URL:
-            raise URLNotFoundError(f"{args.model_engine}")
+            raise URLNotFoundError("OLLAMA_BASE_URL")
+    
+    elif args.mode == "offline" and (args.model_engine == "ollama" or args.model_engine == "vllm"):
+        MODEL_API_KEY = None
+        MODEL_BASE_URL = os.getenv("VLLM_BASE_URL", None)
+
+        if not MODEL_BASE_URL:
+            raise URLNotFoundError("VLLM_BASE_URL")
 
     elif args.mode == "offline" and args.model_engine == None:
         MODEL_API_KEY = None
@@ -96,18 +108,34 @@ def main(args):
 
     # Initialize RAG
     if args.db == 'qdrant':
+        QDRANT_API = os.getenv('QDRANT_API', None)
+        QDRANT_URL = os.getenv('QDRANT_URL', None)
+        if not QDRANT_API:
+            raise APINotFoundError("QDRANT_API")
+        if not QDRANT_URL:
+            raise URLNotFoundError("QDRANT_URL")
+        
         rag = RAG(
             type='qdrant',
-            qdrant_api=os.getenv('QDRANT_API'),
-            qdrant_url=os.getenv('QDRANT_URL'),
+            qdrant_api=QDRANT_API,
+            qdrant_url=QDRANT_URL,
             embeddingName=args.embedding_model,
             llm=llm,
         )
+
     elif args.db == 'mongodb':
+        MONGODB_URI = os.getenv('MONGODB_URI')
+        MONGODB_NAME = os.getenv('MONGODB_NAME')
+        MONGODB_COLLECTION = os.getenv('MONGODB_COLLECTION')
+        if not MONGODB_URI:
+            raise URLNotFoundError("MONGODB_URI")
+        if (not MONGODB_NAME) or (not MONGODB_COLLECTION):
+            raise ValueNotFoundError(f"MONGODB_NAME and MONGODB_COLLECTION")
+        
         rag = RAG(
-            mongodbUri=os.getenv('MONGODB_URI'),
-            dbName=os.getenv('DB_NAME'),
-            dbCollection=os.getenv('DB_COLLECTION'),
+            mongodbUri=MONGODB_URI,
+            dbName=MONGODB_NAME,
+            dbCollection=MONGODB_COLLECTION,
             embeddingName=args.embedding_model,
             llm=llm,
         )
