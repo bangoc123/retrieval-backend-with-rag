@@ -77,10 +77,10 @@ def main(args):
         MODEL_API_KEY = os.getenv('TOGETHER_API_KEY', None)
         MODEL_BASE_URL = os.getenv("MODEL_BASE_URL", None)
 
-        if (not MODEL_API_KEY) and (not MODEL_BASE_URL):
+        if (not MODEL_API_KEY) or (not MODEL_BASE_URL):
             warnings.warn("Make sure you have TogetherAI API key and TogetherAI base url in .env")
 
-    elif args.mode == "offline" and args.model_engine == "ollama" or args.model_engine == "vllms":
+    elif args.mode == "offline" and (args.model_engine == "ollama" or args.model_engine == "vllm"):
         MODEL_API_KEY = None
         MODEL_BASE_URL = os.getenv("MODEL_BASE_URL", None)
 
