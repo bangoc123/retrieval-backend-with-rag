@@ -13,15 +13,19 @@ from reflection import Reflection
 from re_rank import Reranker
 from llms.llms import LLMs
 import argparse
+import warnings
 
 # Load environment variables from .env file
 load_dotenv()
+
+warnings.simplefilter("error")
+
 # Access the key
 MONGODB_URI = os.getenv('MONGODB_URI')
 DB_NAME = os.getenv('DB_NAME')
 DB_COLLECTION = os.getenv('DB_COLLECTION')
 LLM_KEY = os.getenv('GEMINI_KEY')
-OPEN_AI_KEY = os.getenv('OPEN_AI_KEY')
+
 QDRANT_API = os.getenv('QDRANT_API')
 QDRANT_URL = os.getenv('QDRANT_URL')
 TOGETHER_AI = os.getenv('TOGETHER_AI')
@@ -30,19 +34,23 @@ TOGETHER_AI = os.getenv('TOGETHER_AI')
 
 
 
-# --- embedding setup --- # 
+
 def main(args):
-    OpenAIEmbedding(OPEN_AI_KEY)
+
+    # --- embedding setup --- # 
+
+    OpenAIEmbedding(os.getenv('OPEN_AI_KEY'))
 
     # --- embedding setup --- # 
 
 
     # --- Semantic Router Setup --- #
 
-    PRODUCT_ROUTE_NAME = 'products' # define products route name
+    # define products route name
+    PRODUCT_ROUTE_NAME = 'products' 
     CHITCHAT_ROUTE_NAME = 'chitchat'
 
-    openAIEmbeding = OpenAIEmbedding(apiKey=OPEN_AI_KEY, dimensions=1024, name=args.openai_embedding)
+    openAIEmbeding = OpenAIEmbedding(apiKey=os.getenv('OPEN_AI_KEY'), dimensions=1024, name=args.openai_embedding)
     productRoute = Route(name=PRODUCT_ROUTE_NAME, samples=productsSample)
     chitchatRoute = Route(name=CHITCHAT_ROUTE_NAME, samples=chitchatSample)
     semanticRouter = SemanticRouter(openAIEmbeding, routes=[productRoute, chitchatRoute])
@@ -51,33 +59,45 @@ def main(args):
 
     # --- Set up LLMs --- #
 
-    MODEL_ENGINE = os.getenv("MODEL_ENGINE", None)
-    MODEL_BASE_URL = os.getenv("MODEL_BASE_URL", None)
-    MODEL_VERSION = os.getenv("MODEL_VERSION", None)
-
     if args.mode == "online" and args.model_name == "gemini":
-        MODEL_API_KEY = LLM_KEY
+        MODEL_API_KEY = os.getenv('GEMINI_API_KEY', None)  
         MODEL_BASE_URL = None
-    elif args.mode == "online" and args.model_name == "openai":
-        MODEL_API_KEY = OPEN_AI_KEY
-        MODEL_BASE_URL = None
-    elif args.mode == "online" and args.model_name == "together":
-        MODEL_API_KEY = TOGETHER_AI
-        MODEL_BASE_URL = 'https://api.together.xyz/'
-    elif args.model == "offline" and args.model_version == "NousResearch/Meta-Llama-3-8B-Instruct":
-        MODEL_API_KEY = None
-        MODEL_BASE_URL = "https://8a2573d4e00a.ngrok-free.app/"
-    elif args.model == "offline" and args.model_version == "qwen3:0.6b":
-        MODEL_API_KEY = None
-        MODEL_BASE_URL = "http://localhost:11434/"
 
-    llm = LLMs(type=args.mode, model_name=args.model_name, engine=args.model_engine, base_url=MODEL_BASE_URL, api_key=MODEL_API_KEY, model_version=args.model_version)
+        if not MODEL_API_KEY:
+            warnings.warn("Make sure you have GEMINI API key in .env")
+
+    elif args.mode == "online" and args.model_name == "openai":
+        MODEL_API_KEY = os.getenv('OPENAI_API_KEY')
+        MODEL_BASE_URL = None
+
+        if not MODEL_API_KEY:
+            warnings.warn("Make sure you have OPENAI API key in .env")
+
+    elif args.mode == "online" and args.model_name == "together":
+        MODEL_API_KEY = os.getenv('TOGETHER_API_KEY', None)
+        MODEL_BASE_URL = os.getenv("MODEL_BASE_URL", None)
+
+        if (not MODEL_API_KEY) and (not MODEL_BASE_URL):
+            warnings.warn("Make sure you have TogetherAI API key and TogetherAI base url in .env")
+
+    elif args.mode == "offline" and args.model_engine == "ollama" or args.model_engine == "vllms":
+        MODEL_API_KEY = None
+        MODEL_BASE_URL = os.getenv("MODEL_BASE_URL", None)
+
+        if not MODEL_BASE_URL:
+            warnings.warn("Make sure you have Ollama base url in .env")
+
+    elif args.mode == "offline" and args.model_engine == None:
+        MODEL_API_KEY = None
+        MODEL_BASE_URL = None
+
+    llm = LLMs(type=args.mode, model_version=args.model_version, model_name=args.model_name, engine=args.model_engine, base_url=MODEL_BASE_URL, api_key=MODEL_API_KEY)
 
     # --- End Set up LLMs --- #
 
     # --- Relection Setup --- #
 
-    gpt = openai.OpenAI(api_key=OPEN_AI_KEY)
+    gpt = openai.OpenAI(api_key=os.getenv('OPEN_AI_KEY'))
     reflection = Reflection(llm=gpt)
 
     # --- End Reflection Setup --- #
@@ -86,7 +106,7 @@ def main(args):
     CORS(app)
 
     # Initialize RAG
-    if args.store_type == 'qdrant':
+    if args.db == 'qdrant':
         rag = RAG(
             type='qdrant',
             qdrant_api=QDRANT_API,
@@ -94,7 +114,7 @@ def main(args):
             embeddingName=args.embedding_model,
             llm=llm,
         )
-    elif args.store_type == 'mongodb':
+    elif args.db == 'mongodb':
         rag = RAG(
             mongodbUri=MONGODB_URI,
             dbName=DB_NAME,
@@ -158,8 +178,8 @@ if __name__ == "__main__":
     parser.add_argument('--mode', type=str, choices=['online', 'offline'], default='online', help='Choose either online or offline mode system')
     parser.add_argument('--model_name', type=str, default='gemini', help='Define name of LLM model to use')
     parser.add_argument('--model_engine', type=str, default='ollama', help='Define model engine of LLM model (Optional)')
-    parser.add_argument('--model_version', type=str, default=None, help='Define model version of LLM model (Optional)')
-    parser.add_argument('--store_type', type=str, choices=['qdrant', 'mongodb'], default='qdrant', help='Choose type of vector store database')
+    parser.add_argument('--model_version', type=str, default='gemini-2.5-flash-lite', help='Define model version of LLM model (Optional)')
+    parser.add_argument('--db', type=str, choices=['qdrant', 'mongodb'], default='qdrant', help='Choose type of vector store database')
     parser.add_argument('--embedding_model', type=str, default='Alibaba-NLP/gte-multilingual-base', help='Declare what embedding model to use for RAG')
     parser.add_argument('--reranker', type=str, default='BAAI/bge-reranker-v2-m3', help='Declare name of CrossEncoder ReRanker')
     parser.add_argument('--openai_embedding', type=str, default='text-embedding-3-small', help='Declare OpenAI Embedding model')
