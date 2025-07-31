@@ -4,7 +4,7 @@ import os
 import google.generativeai as genai
 from flask_cors import CORS
 from rag.core import RAG
-from embeddings import OpenAIEmbedding
+from embeddings import SentenceTransformerEmbedding, EmbeddingConfig
 from semantic_router import SemanticRouter, Route
 from semantic_router.samples import productsSample, chitchatSample
 import google.generativeai as genai
@@ -42,11 +42,11 @@ def main(args):
     PRODUCT_ROUTE_NAME = 'products' 
     CHITCHAT_ROUTE_NAME = 'chitchat'
 
-    openAIEmbeding = OpenAIEmbedding(apiKey=os.getenv('OPEN_AI_KEY'), dimensions=1024, name=args.openai_embedding)
+    sentenceTransformerEmbedding = SentenceTransformerEmbedding(config=EmbeddingConfig(name=args.embedding_model))
     productRoute = Route(name=PRODUCT_ROUTE_NAME, samples=productsSample)
     chitchatRoute = Route(name=CHITCHAT_ROUTE_NAME, samples=chitchatSample)
-    semanticRouter = SemanticRouter(openAIEmbeding, routes=[productRoute, chitchatRoute])
-
+    semanticRouter = SemanticRouter(sentenceTransformerEmbedding, routes=[productRoute, chitchatRoute])
+    
     # --- End Semantic Router Setup --- #
 
     # --- Set up LLMs --- #
@@ -169,7 +169,7 @@ def main(args):
             source_information = ""
             for i in range(len(ranked_passages)):
                 source_information += f"{i+1} {ranked_passages[i]}\n"
-            print(source_information)
+
             combined_information = f"Hãy trở thành chuyên gia tư vấn bán hàng cho một cửa hàng điện thoại. Câu hỏi của khách hàng: {query}\nTrả lời câu hỏi dựa vào các thông tin sản phẩm dưới đây: {source_information}."
             data.append({
                 "role": "user",
@@ -204,7 +204,6 @@ if __name__ == "__main__":
     feature_group.add_argument('--db', type=str, choices=['qdrant', 'mongodb'], default='qdrant', help='Choose type of vector store database')
     feature_group.add_argument('--embedding_model', type=str, default='Alibaba-NLP/gte-multilingual-base', help='Declare what embedding model to use for RAG')
     feature_group.add_argument('--reranker', type=str, default='BAAI/bge-reranker-v2-m3', help='Declare name of CrossEncoder ReRanker')
-    feature_group.add_argument('--openai_embedding', type=str, default='text-embedding-3-small', help='Declare OpenAI Embedding model')
 
     args = parser.parse_args()
     main(args)
