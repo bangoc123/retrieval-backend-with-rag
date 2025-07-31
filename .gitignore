@@ -6,3 +6,5 @@ venv/
 log_*.csv
 
 func_test/
+
+chroma_db/
