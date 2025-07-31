@@ -17,7 +17,7 @@ class RAG():
             qdrant_url: Optional[str] = None,
             dbName: Optional[str] = None,
             dbCollection: Optional[str] = None,
-            embeddingName: str ='keepitreal/vietnamese-sbert',
+            embeddingName: str ='Alibaba-NLP/gte-multilingual-base',
         ):
         self.type = type
         if self.type == 'mongodb':
