@@ -109,8 +109,8 @@ class LocalLLMs:
                 payload = {
                     "model": self.model_version,
                     "messages": prompt,
-                    "max_tokens": self.max_tokens,
-                    "temperature": 0.7
+                    # "max_tokens": self.max_tokens,
+                    # "temperature": 0.7
                 }
                 response = self.client.post(
                     f"{self.base_url}/v1/chat/completions",
