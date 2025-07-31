@@ -74,14 +74,14 @@ def main(args):
         if not MODEL_BASE_URL:
             raise URLNotFoundError('TOGETHER_BASE_URL')
 
-    elif args.mode == "offline" and (args.model_engine == "ollama" or args.model_engine == "vllm"):
+    elif args.mode == "offline" and args.model_engine == "ollama":
         MODEL_API_KEY = None
         MODEL_BASE_URL = os.getenv("OLLAMA_BASE_URL", None)
 
         if not MODEL_BASE_URL:
             raise URLNotFoundError("OLLAMA_BASE_URL")
     
-    elif args.mode == "offline" and (args.model_engine == "ollama" or args.model_engine == "vllm"):
+    elif args.mode == "offline" and args.model_engine == "vllm":
         MODEL_API_KEY = None
         MODEL_BASE_URL = os.getenv("VLLM_BASE_URL", None)
 
