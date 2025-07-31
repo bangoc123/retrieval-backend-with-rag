@@ -135,13 +135,26 @@ def main(args):
             raise ValueNotFoundError(f"MONGODB_NAME and MONGODB_COLLECTION")
         
         rag = RAG(
+            type='mongodb',
             mongodbUri=MONGODB_URI,
             dbName=MONGODB_NAME,
             dbCollection=MONGODB_COLLECTION,
             embeddingName=args.embedding_model,
             llm=llm,
         )
+    else:
 
+        def chroma_db_exists(persist_dir: str = "./chroma_db") -> bool:
+            return os.path.isdir(persist_dir) and bool(os.listdir(persist_dir))
+
+        if not chroma_db_exists:
+            load_csv_to_chromadb()
+            
+        rag = RAG(
+            type='chromadb',
+            embeddingName=args.embedding_model,
+            llm=llm
+        )
     # Initialize ReRanker
     reranker = Reranker(model_name=args.reranker)
 
@@ -197,7 +210,7 @@ if __name__ == "__main__":
     model_group.add_argument('-v','--model_version', type=str, required=True, help='Define model version of LLM model (Optional)')
 
     feature_group = parser.add_argument_group("Feature Option")
-    feature_group.add_argument('--db', type=str, choices=['qdrant', 'mongodb'], default='qdrant', help='Choose type of vector store database')
+    feature_group.add_argument('--db', type=str, choices=['qdrant', 'mongodb', 'chromadb'], default='qdrant', help='Choose type of vector store database')
     feature_group.add_argument('--embedding_model', type=str, default='Alibaba-NLP/gte-multilingual-base', help='Declare what embedding model to use for RAG')
     feature_group.add_argument('--reranker', type=str, default='Alibaba-NLP/gte-multilingual-reranker-base', help='Declare name of CrossEncoder ReRanker')
 
