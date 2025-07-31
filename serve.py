@@ -168,8 +168,8 @@ def main(args):
             scores, ranked_passages = reranker(query, passages)
             source_information = ""
             for i in range(len(ranked_passages)):
-                source_information += f"{i+1} {ranked_passages}\n"
-
+                source_information += f"{i+1} {ranked_passages[i]}\n"
+            print(source_information)
             combined_information = f"Hãy trở thành chuyên gia tư vấn bán hàng cho một cửa hàng điện thoại. Câu hỏi của khách hàng: {query}\nTrả lời câu hỏi dựa vào các thông tin sản phẩm dưới đây: {source_information}."
             data.append({
                 "role": "user",
@@ -198,7 +198,7 @@ if __name__ == "__main__":
     model_group.add_argument('-m','--mode', type=str, choices=['online', 'offline'], default='online', help='Choose either online or offline mode system')
     model_group.add_argument('-n','--model_name', type=str, default='gemini', help='Define name of LLM model to use')
     model_group.add_argument('-e','--model_engine', type=str, default='ollama', help='Define model engine of LLM model (Optional)')
-    model_group.add_argument('-v','--model_version', type=str, default='gemini-2.5-flash-lite', help='Define model version of LLM model (Optional)')
+    model_group.add_argument('-v','--model_version', type=str, required=True, help='Define model version of LLM model (Optional)')
 
     feature_group = parser.add_argument_group("Feature Option")
     feature_group.add_argument('--db', type=str, choices=['qdrant', 'mongodb'], default='qdrant', help='Choose type of vector store database')
