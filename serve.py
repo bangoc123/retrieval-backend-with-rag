@@ -12,138 +12,199 @@ import openai
 from reflection import Reflection
 from re_rank import Reranker
 from llms.llms import LLMs
+import argparse
+import warnings
 
 # Load environment variables from .env file
 load_dotenv()
-# Access the key
-MONGODB_URI = os.getenv('MONGODB_URI')
-DB_NAME = os.getenv('DB_NAME')
-DB_COLLECTION = os.getenv('DB_COLLECTION')
-LLM_KEY = os.getenv('GEMINI_KEY')
-EMBEDDING_MODEL = os.getenv('EMBEDDING_MODEL') or 'keepitreal/vietnamese-sbert'
-OPEN_AI_KEY = os.getenv('OPENAI_API_KEY')
-OPEN_AI_EMBEDDING_MODEL = os.getenv('OPEN_AI_EMBEDDING_MODEL') or 'text-embedding-3-small'
-QDRANT_API = os.getenv('QDRANT_API')
-QDRANT_URL = os.getenv('QDRANT_URL')
-TOGETHER_AI = os.getenv('TOGETHER_AI')
 
-OpenAIEmbedding(OPEN_AI_KEY)
+# Add custom exception
+class URLNotFoundError(Exception):
+    def __init__(self, name):
+        self.name = name 
+        super().__init__(f"Please make sure you have {name} in .env")
 
-MODEL_TYPE = os.getenv("MODEL_TYPE", "offline")
-MODEL_NAME = os.getenv("MODEL_NAME", "NousResearch/Meta-Llama-3-8B-Instruct")
-MODEL_ENGINE = os.getenv("MODEL_ENGINE", None)
-MODEL_BASE_URL = os.getenv("MODEL_BASE_URL", None)
-MODEL_VERSION = os.getenv("MODEL_VERSION", None)
-if MODEL_TYPE == "online" and MODEL_NAME == "gemini":
-    MODEL_API_KEY = LLM_KEY
-elif MODEL_TYPE == "online" and MODEL_NAME == "openai":
-    MODEL_API_KEY = OPEN_AI_KEY
-elif MODEL_TYPE == "online" and MODEL_NAME == "together":
-    MODEL_API_KEY = TOGETHER_AI
-else:
-    MODEL_API_KEY = None
+class APINotFoundError(Exception):
+    def __init__(self, name):
+        self.name = name 
+        super().__init__(f"Please make sure you have {name} in .env")
 
-# --- embedding setup --- # 
+class ValueNotFoundError(Exception):
+    def __init__(self, name):
+        self.name = name 
+        super().__init__(f"Please make sure you have {name} in .env")
 
+def main(args):
 
-# --- Semantic Router Setup --- #
+    # --- Semantic Router Setup --- #
 
-PRODUCT_ROUTE_NAME = 'products' # define products route name
-CHITCHAT_ROUTE_NAME = 'chitchat'
+    # define products route name
+    PRODUCT_ROUTE_NAME = 'products' 
+    CHITCHAT_ROUTE_NAME = 'chitchat'
 
-openAIEmbeding = OpenAIEmbedding(apiKey=OPEN_AI_KEY, dimensions=1024, name=OPEN_AI_EMBEDDING_MODEL)
-productRoute = Route(name=PRODUCT_ROUTE_NAME, samples=productsSample)
-chitchatRoute = Route(name=CHITCHAT_ROUTE_NAME, samples=chitchatSample)
-semanticRouter = SemanticRouter(openAIEmbeding, routes=[productRoute, chitchatRoute])
+    openAIEmbeding = OpenAIEmbedding(apiKey=os.getenv('OPEN_AI_KEY'), dimensions=1024, name=args.openai_embedding)
+    productRoute = Route(name=PRODUCT_ROUTE_NAME, samples=productsSample)
+    chitchatRoute = Route(name=CHITCHAT_ROUTE_NAME, samples=chitchatSample)
+    semanticRouter = SemanticRouter(openAIEmbeding, routes=[productRoute, chitchatRoute])
 
-# --- End Semantic Router Setup --- #
+    # --- End Semantic Router Setup --- #
 
+    # --- Set up LLMs --- #
 
-# --- Set up LLMs --- #
+    if args.mode == "online" and args.model_name == "gemini":
+        MODEL_API_KEY = os.getenv('GEMINI_API_KEY', None)  
+        MODEL_BASE_URL = None
 
-genai.configure(api_key=LLM_KEY)
-# llm = genai.GenerativeModel('gemini-1.5-pro')
-llm = LLMs(type=MODEL_TYPE, model_name=MODEL_NAME, engine=MODEL_ENGINE, base_url=MODEL_BASE_URL, api_key=MODEL_API_KEY, model_version=MODEL_VERSION)
+        if not MODEL_API_KEY:
+            raise APINotFoundError('GEMINI_API_KEY')
 
+    elif args.mode == "online" and args.model_name == "openai":
+        MODEL_API_KEY = os.getenv('OPENAI_API_KEY')
+        MODEL_BASE_URL = None
 
-# --- End Set up LLMs --- #
+        if not MODEL_API_KEY:
+            raise APINotFoundError('OPENAI_API_KEY')
 
-# --- Relection Setup --- #
+    elif args.mode == "online" and args.model_name == "together":
+        MODEL_API_KEY = os.getenv('TOGETHER_API_KEY', None)
+        MODEL_BASE_URL = os.getenv("TOGETHER_BASE_URL", None)
 
-gpt = openai.OpenAI(api_key=OPEN_AI_KEY)
-reflection = Reflection(llm=gpt)
+        if not MODEL_API_KEY:
+            raise APINotFoundError('TOGETHER_API_KEY')
+        if not MODEL_BASE_URL:
+            raise URLNotFoundError('TOGETHER_BASE_URL')
 
-# --- End Reflection Setup --- #
+    elif args.mode == "offline" and args.model_engine == "ollama":
+        MODEL_API_KEY = None
+        MODEL_BASE_URL = os.getenv("OLLAMA_BASE_URL", None)
 
-app = Flask(__name__)
-CORS(app)
-
-
-# Initialize RAG
-rag = RAG(
-    # mongodbUri=MONGODB_URI,
-    # dbName=DB_NAME,
-    # dbCollection=DB_COLLECTION,
-    type='qdrant',
-    qdrant_api=QDRANT_API,
-    qdrant_url=QDRANT_URL,
-    embeddingName='Alibaba-NLP/gte-multilingual-base',
-    llm=llm,
-)
-reranker = Reranker(model_name="BAAI/bge-reranker-v2-m3")
-def process_query(query):
-    return query.lower()
-
-@app.route('/api/search', methods=['POST'])
-def handle_query():
-    data = list(request.get_json())
-
-    reflected_query = reflection(data)
-    query = reflected_query
-    # query = data[-1]["parts"][0]["text"]
-    # query = process_query(query)
-
-    if not query:
-        return jsonify({'error': 'No query provided'}), 400
-     
-    guidedRoute = semanticRouter.guide(query)[1]
-
-    if guidedRoute == PRODUCT_ROUTE_NAME:
-        # Decide to get new info or use previous info
-        # Guide to RAG system
-        print("Guide to RAGs")
-
-        # reflected_query = reflection(data)
-        # query = reflected_query
-
-        # source_information = rag.enhance_prompt(query).replace('<br>', '\n')
-        passages = [passage['combined_information'] for passage in rag.vector_search(query)]
-        scores, ranked_passages = reranker(query, passages)
-        source_information = ""
-        for i in range(len(ranked_passages)):
-            source_information += f"{i+1} {ranked_passages}\n"
-
-        combined_information = f"Hãy trở thành chuyên gia tư vấn bán hàng cho một cửa hàng điện thoại. Câu hỏi của khách hàng: {query}\nTrả lời câu hỏi dựa vào các thông tin sản phẩm dưới đây: {source_information}."
-        data.append({
-            "role": "user",
-            "content": combined_information
-        })
-        response = rag.generate_content(data)
-    else:
-        # Guide to LLMs
-        print("Guide to LLMs")
-        response = llm.generate_content(data)
-
-    # print('====data', data)
+        if not MODEL_BASE_URL:
+            raise URLNotFoundError("OLLAMA_BASE_URL")
     
-    return jsonify({
-        'parts': [
-            {
-            'text': response,
-            }
-        ],
-        'role': 'model'
-        })
+    elif args.mode == "offline" and args.model_engine == "vllm":
+        MODEL_API_KEY = None
+        MODEL_BASE_URL = os.getenv("VLLM_BASE_URL", None)
 
-if __name__ == '__main__':
+        if not MODEL_BASE_URL:
+            raise URLNotFoundError("VLLM_BASE_URL")
+
+    elif args.mode == "offline" and args.model_engine == None:
+        MODEL_API_KEY = None
+        MODEL_BASE_URL = None
+        if not MODEL_BASE_URL:
+            raise URLNotFoundError("VLLM_BASE_URL or OLLAMA_BASE_URL")
+
+    llm = LLMs(type=args.mode, model_version=args.model_version, model_name=args.model_name, engine=args.model_engine, base_url=MODEL_BASE_URL, api_key=MODEL_API_KEY)
+
+    # --- End Set up LLMs --- #
+
+    # --- Relection Setup --- #
+
+    gpt = openai.OpenAI(api_key=os.getenv('OPEN_AI_KEY'))
+    reflection = Reflection(llm=gpt)
+
+    # --- End Reflection Setup --- #
+
+    app = Flask(__name__)
+    CORS(app)
+
+    # Initialize RAG
+    if args.db == 'qdrant':
+        QDRANT_API = os.getenv('QDRANT_API', None)
+        QDRANT_URL = os.getenv('QDRANT_URL', None)
+        if not QDRANT_API:
+            raise APINotFoundError("QDRANT_API")
+        if not QDRANT_URL:
+            raise URLNotFoundError("QDRANT_URL")
+        
+        rag = RAG(
+            type='qdrant',
+            qdrant_api=QDRANT_API,
+            qdrant_url=QDRANT_URL,
+            embeddingName=args.embedding_model,
+            llm=llm,
+        )
+
+    elif args.db == 'mongodb':
+        MONGODB_URI = os.getenv('MONGODB_URI')
+        MONGODB_NAME = os.getenv('MONGODB_NAME')
+        MONGODB_COLLECTION = os.getenv('MONGODB_COLLECTION')
+        if not MONGODB_URI:
+            raise URLNotFoundError("MONGODB_URI")
+        if (not MONGODB_NAME) or (not MONGODB_COLLECTION):
+            raise ValueNotFoundError(f"MONGODB_NAME and MONGODB_COLLECTION")
+        
+        rag = RAG(
+            mongodbUri=MONGODB_URI,
+            dbName=MONGODB_NAME,
+            dbCollection=MONGODB_COLLECTION,
+            embeddingName=args.embedding_model,
+            llm=llm,
+        )
+
+    # Initialize ReRanker
+    reranker = Reranker(model_name=args.reranker)
+
+    def process_query(query):
+        return query.lower()
+
+    @app.route('/api/search', methods=['POST'])
+    def handle_query():
+        data = list(request.get_json())
+
+        reflected_query = reflection(data)
+        query = reflected_query
+
+        guidedRoute = semanticRouter.guide(query)[1]
+
+        if guidedRoute == PRODUCT_ROUTE_NAME:
+            # Guide to RAG system
+            print("Guide to RAGs")
+
+            # Take relevant documents from RAG system
+            passages = [passage['combined_information'] for passage in rag.vector_search(query)]
+            
+            # Rerannk retrieved documents
+            scores, ranked_passages = reranker(query, passages)
+            source_information = ""
+            for i in range(len(ranked_passages)):
+                source_information += f"{i+1} {ranked_passages[i]}\n"
+            print(source_information)
+            combined_information = f"Hãy trở thành chuyên gia tư vấn bán hàng cho một cửa hàng điện thoại. Câu hỏi của khách hàng: {query}\nTrả lời câu hỏi dựa vào các thông tin sản phẩm dưới đây: {source_information}."
+            data.append({
+                "role": "user",
+                "content": combined_information
+            })
+            response = rag.generate_content(data)
+        else:
+            # Guide to LLMs
+            print("Guide to LLMs")
+            response = llm.generate_content(data)
+        
+        return jsonify({
+            'parts': [
+                {
+                'text': response
+                }
+            ],
+            'role': 'model'
+            })
     app.run(host='0.0.0.0', port=5002, debug=True)
+
+if __name__ == "__main__": 
+    parser = argparse.ArgumentParser(description="Arguments for serve.py")
+
+    model_group = parser.add_argument_group("Model Option")
+    model_group.add_argument('-m','--mode', type=str, choices=['online', 'offline'], default='online', help='Choose either online or offline mode system')
+    model_group.add_argument('-n','--model_name', type=str, default='gemini', help='Define name of LLM model to use')
+    model_group.add_argument('-e','--model_engine', type=str, default='ollama', help='Define model engine of LLM model (Optional)')
+    model_group.add_argument('-v','--model_version', type=str, required=True, help='Define model version of LLM model (Optional)')
+
+    feature_group = parser.add_argument_group("Feature Option")
+    feature_group.add_argument('--db', type=str, choices=['qdrant', 'mongodb'], default='qdrant', help='Choose type of vector store database')
+    feature_group.add_argument('--embedding_model', type=str, default='Alibaba-NLP/gte-multilingual-base', help='Declare what embedding model to use for RAG')
+    feature_group.add_argument('--reranker', type=str, default='BAAI/bge-reranker-v2-m3', help='Declare name of CrossEncoder ReRanker')
+    feature_group.add_argument('--openai_embedding', type=str, default='text-embedding-3-small', help='Declare OpenAI Embedding model')
+
+    args = parser.parse_args()
+    main(args)
