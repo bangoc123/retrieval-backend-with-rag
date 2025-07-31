@@ -1,5 +1,6 @@
 import requests
 import re
+from typing import List, Dict
 class LocalLLMs:
     def __init__(self, engine: str, model_version: str, base_url: str = None):
         """ Initialize the LocalLLMs class 
@@ -82,7 +83,7 @@ class LocalLLMs:
         cleaned_text = re.sub(r'\n\s*\n', '\n', cleaned_text).strip()
         return cleaned_text
     
-    def generate_content(self, prompt: str) -> str:
+    def generate_content(self, prompt: List[Dict[str,str]]) -> str:
         """Generate content using the local LLM based on the provided prompt.
             input: prompt (str): The prompt to generate content for.
             output: str: The generated content.
