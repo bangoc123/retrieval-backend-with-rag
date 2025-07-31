@@ -91,6 +91,8 @@ def main(args):
     elif args.mode == "offline" and args.model_engine == None:
         MODEL_API_KEY = None
         MODEL_BASE_URL = None
+        if not MODEL_BASE_URL:
+            raise URLNotFoundError("VLLM_BASE_URL or OLLAMA_BASE_URL")
 
     llm = LLMs(type=args.mode, model_version=args.model_version, model_name=args.model_name, engine=args.model_engine, base_url=MODEL_BASE_URL, api_key=MODEL_API_KEY)
 
