@@ -199,7 +199,7 @@ if __name__ == "__main__":
     feature_group = parser.add_argument_group("Feature Option")
     feature_group.add_argument('--db', type=str, choices=['qdrant', 'mongodb'], default='qdrant', help='Choose type of vector store database')
     feature_group.add_argument('--embedding_model', type=str, default='Alibaba-NLP/gte-multilingual-base', help='Declare what embedding model to use for RAG')
-    feature_group.add_argument('--reranker', type=str, default='BAAI/bge-reranker-v2-m3', help='Declare name of CrossEncoder ReRanker')
+    feature_group.add_argument('--reranker', type=str, default='Alibaba-NLP/gte-multilingual-reranker-base', help='Declare name of CrossEncoder ReRanker')
 
     args = parser.parse_args()
     main(args)
