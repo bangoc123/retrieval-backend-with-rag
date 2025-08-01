@@ -14,6 +14,7 @@ from re_rank import Reranker
 from llms.llms import LLMs
 import argparse
 import warnings
+from insert_data import load_csv_to_chromadb
 
 # Load environment variables from .env file
 load_dotenv()
@@ -144,12 +145,22 @@ def main(args):
         )
     else:
 
-        def chroma_db_exists(persist_dir: str = "./chroma_db") -> bool:
-            return os.path.isdir(persist_dir) and bool(os.listdir(persist_dir))
+        def chromadb_collection_exists(collection_name: str, persist_dir: str = "./chroma_db") -> bool:
+            try:
+                import chromadb
+                client = chromadb.PersistentClient(path=persist_dir)
+                collections = client.list_collections()
+                return any(col.name == collection_name for col in collections)
+            except Exception as e:
+                print(f"Error checking ChromaDB collection: {e}")
+                return False
 
-        if not chroma_db_exists:
-            load_csv_to_chromadb()
-            
+        if not chromadb_collection_exists(collection_name=args.embedding_model.split('/')[-1]):
+            print(f"The collection {args.embedding_model.split('/')[-1]} does not exist.\n")
+            print("Starting to create new collection. Please make sure you have a valid CSV file in ./data.\n")
+            load_csv_to_chromadb(csv_path="data/hoanghamobile.csv",persist_dir="./chroma_db", model_name=args.embedding_model)
+            print("The data insert process is complete.")
+
         rag = RAG(
             type='chromadb',
             embeddingName=args.embedding_model,

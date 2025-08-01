@@ -28,7 +28,7 @@ class RAG():
         elif self.type == 'qdrant':
             self.qdrant_api = qdrant_api
             self.qdrant_url = qdrant_url
-            self.qdrant_collection = embeddingName.split('/')[1]
+            self.qdrant_collection = embeddingName.split('/')[-1]
             self.client = QdrantClient(
                             url=self.qdrant_url,
                             api_key=self.qdrant_api
@@ -36,7 +36,7 @@ class RAG():
         else:
             self.type = 'chromadb'
             self.client = chromadb.PersistentClient(path="./chroma_db")
-            self.chromadb_collection_name = embeddingName.split('/')[1] 
+            self.chromadb_collection_name = embeddingName.split('/')[-1] 
             if self._collection_exists:
                 self.chromadb_collection = self.client.get_collection(name=self.chromadb_collection_name)
 
@@ -103,7 +103,7 @@ class RAG():
                     results.append({'_id': hit.payload['_id'], 'combined_information': hit.payload['combined_information'], 'score': hit.score})
                 return results
             else: 
-                print(f"Collection is not exist")
+                print(f"Collection {self.qdrant_collection} does not exist")
                 return
         elif self.type == 'mongodb':
             vector_search_stage = {
@@ -162,38 +162,38 @@ class RAG():
                 results.append(result)
             return results
 
-    def enhance_prompt(self, query):
-        get_knowledge = self.vector_search(query, 10)
-        enhanced_prompt = ""
-        i = 0
-        for result in get_knowledge:
-            if result.get('title'):
-                i += 1
-                enhanced_prompt += f"\n{i}) Tên: {result.get('title')}"
+    # def enhance_prompt(self, query):
+    #     get_knowledge = self.vector_search(query, 10)
+    #     enhanced_prompt = ""
+    #     i = 0
+    #     for result in get_knowledge:
+    #         if result.get('title'):
+    #             i += 1
+    #             enhanced_prompt += f"\n{i}) Tên: {result.get('title')}"
 
-                # Price 
-                if result.get('current_price'):
-                    enhanced_prompt += f", Giá: {result.get('current_price')}"
-                else:
-                    enhanced_prompt += f", Giá: Không có thông "
-                # Promotion
-                if result.get('product_promotion'):
-                    enhanced_prompt += f", Ưu đãi: {result['product_promotion']}"
-                else:
-                    enhanced_prompt += ", Ưu đãi: Không có thông tin"
+    #             # Price 
+    #             if result.get('current_price'):
+    #                 enhanced_prompt += f", Giá: {result.get('current_price')}"
+    #             else:
+    #                 enhanced_prompt += f", Giá: Không có thông "
+    #             # Promotion
+    #             if result.get('product_promotion'):
+    #                 enhanced_prompt += f", Ưu đãi: {result['product_promotion']}"
+    #             else:
+    #                 enhanced_prompt += ", Ưu đãi: Không có thông tin"
 
-                # Specifications
-                if result.get('product_specs'):
-                    enhanced_prompt += f", Thông số: {result['product_specs']}"
-                else:
-                    enhanced_prompt += ", Thông số: Không có thông tin"
+    #             # Specifications
+    #             if result.get('product_specs'):
+    #                 enhanced_prompt += f", Thông số: {result['product_specs']}"
+    #             else:
+    #                 enhanced_prompt += ", Thông số: Không có thông tin"
 
-                # Color options
-                if result.get('color_options'):
-                    enhanced_prompt += f", Màu sắc: {result['color_options']}"
-                else:
-                    enhanced_prompt += ", Màu sắc: Không có thông tin"
-        return enhanced_prompt
+    #             # Color options
+    #             if result.get('color_options'):
+    #                 enhanced_prompt += f", Màu sắc: {result['color_options']}"
+    #             else:
+    #                 enhanced_prompt += ", Màu sắc: Không có thông tin"
+    #     return enhanced_prompt
 
     def generate_content(self, prompt):
         return self.llm.generate_content(prompt)
