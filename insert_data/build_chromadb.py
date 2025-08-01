@@ -6,9 +6,11 @@ from sentence_transformers import SentenceTransformer
 import argparse
 import os 
 
+FOLDER_PATH = "./data"
+
 class DataNotFoundError(Exception):
     def __init__(self):
-        super().__init__(f"Please make sure you have valid CSV file in insert_data/data")
+        super().__init__(f"Please make sure you have valid CSV file in ./data")
 
 def csv_exists(folder_path: str, file_name: str) -> bool:
     """
@@ -28,10 +30,10 @@ def csv_exists(folder_path: str, file_name: str) -> bool:
     return os.path.isfile(full_path)
 
 
-def load_csv_to_chromadb(args):
+def load_csv_to_chromadb(csv_path: str, persist_dir: str = "./chroma_db", model_name: str = "Alibaba-NLP/gte-multilingual-base"):
     # Load CSV
-    if csv_exists(folder_path="./insert_data/data", file_name=args.csv_path.split('/')[-1]):
-        df = pd.read_csv(args.csv_path)
+    if csv_exists(folder_path=FOLDER_PATH, file_name=csv_path.split('/')[-1]):
+        df = pd.read_csv(os.path.join(FOLDER_PATH, csv_path.split('/')[-1]))
     else:
         raise DataNotFoundError
 
@@ -41,18 +43,18 @@ def load_csv_to_chromadb(args):
     df['combined_information'] = df.apply(lambda row: ', '.join(f"{col}: {row[col]}" for col in df.columns), axis=1)
 
     # Load sentence embedding model
-    model = SentenceTransformer(args.model_name, trust_remote_code=True)
+    model = SentenceTransformer(model_name, trust_remote_code=True)
 
     # Generate embeddings from 'combined_information' column
     df['embedding'] = df['combined_information'].apply(lambda x: model.encode(x).tolist())
 
     # Connect to ChromaDB
-    client = chromadb.PersistentClient(path=args.persist_dir)
+    client = chromadb.PersistentClient(path=persist_dir)
 
-    if '/' in args.model_name:
-      collection_name = args.model_name.split('/')[1]
+    if '/' in model_name:
+      collection_name = model_name.split('/')[1]
     else:
-      collection_name = args.model_name
+      collection_name = model_name
     collection = client.get_or_create_collection(name=collection_name)
 
     # Add to Chroma
@@ -83,4 +85,4 @@ if __name__ == "__main__":
     parser.add_argument("--model_name", type=str, default="Alibaba-NLP/gte-multilingual-base", help="Choose model to embedding.")
 
     args = parser.parse_args()
-    load_csv_to_chromadb(args)
+    load_csv_to_chromadb(csv_path=args.csv_path, persist_dir=args.persist_dir, model_name=args.model_name)
