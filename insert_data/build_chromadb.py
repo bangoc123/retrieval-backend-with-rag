@@ -6,6 +6,8 @@ from sentence_transformers import SentenceTransformer
 import argparse
 import os 
 
+FOLDER_PATH = "./data"
+
 class DataNotFoundError(Exception):
     def __init__(self):
         super().__init__(f"Please make sure you have valid CSV file")
