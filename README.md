@@ -36,7 +36,9 @@ LLM Answer Benchmarks
 
 #### Chatbot Architecture
 
-![Architecture](https://storage.googleapis.com/mle-courses-prod/users/61b6fa1ba83a7e37c8309756/private-files/40ec1270-6b89-11f0-8077-59248e41cdf6-Screenshot_2025-07-28_150209.png)
+![Architecture](https://storage.googleapis.com/mle-courses-prod/users/61b6fa1ba83a7e37c8309756/private-files/dbbba200-6e88-11f0-9258-839289629457-Screenshot_2025-08-01_103702.png)
+
+
 
 #### The chatbot can retrieve your product data and answer related questions:
 
@@ -46,7 +48,49 @@ LLM Answer Benchmarks
 
 ![Chitchat](https://storage.googleapis.com/mle-courses-prod/users/61b6fa1ba83a7e37c8309756/private-files/3efb6050-36ca-11ef-a9c5-539ef4fa11ba-Screen_Shot_2024_06_30_at_16.57.11.png)
 
----
+### Opensource client via Docker
+
+
+![](https://storage.googleapis.com/mle-courses-prod/users/61b6fa1ba83a7e37c8309756/private-files/221bcae0-6e93-11f0-9258-839289629457-Screenshot_2025-08-01_115038.png)
+
+We've open-sourced a chatbot client via Docker.
+
+```bash
+# Pull the Docker image
+docker pull protonx/protonx-open-source:protonx-chat-client-v01
+```
+
+```bash
+# Run the Docker image
+docker run -p 3002:3000 -e RAG_BACKEND_URL=${YOUR_BACKEND_URL} protonx/protonx-open-source:protonx-chat-client-v01
+```
+
+If your local backend URL is `http://localhost:5002/api/search`, the command will be:
+
+```bash
+docker run -p 3002:3000 -e RAG_BACKEND_URL="http://localhost:5002/api/search" protonx/protonx-open-source:protonx-chat-client-v01
+```
+
+The backend should accept a `POST` request with the following request body:
+
+```json
+[
+  {
+    "role": "user",
+    "content": "Tôi đang tham khảo redmi note 13 plus",
+  }
+]
+```
+
+And return a response in the following format:
+
+```json
+{
+  "role": "assistant",
+  "content": "Xin chào! Cảm ơn bạn đã quan tâm đến sản phẩm của chúng tôi. Điện thoại Redmi Note 13 Pro+ là một lựa chọn tuyệt vời..."
+}
+```
+
 
 ### Setup
 
@@ -63,24 +107,32 @@ pip install -r requirements.txt
 Create a `.env` file and add the following:
 
 ```env
+
+# MongoDB vector database (leave blank if not used)
 MONGODB_URI=
-EMBEDDING_MODEL=
 DB_NAME=
 DB_COLLECTION=
-GEMINI_KEY=
 
-# If you are using Qdrant Cloud
+# Qdrant vector database (leave blank if not used)
 QDRANT_API=
 QDRANT_URL=
+
+# Gemini LLM (leave blank if not used)
+GEMINI_API_KEY=
+
+# OpenAI LLM (leave blank if not used)
+OPENAI_API_KEY=
+
+# Together AI LLM (leave blank if not used)
+TOGETHER_API_KEY=
+TOGETHER_BASE_URL=
+
+# Ollama local LLM engine (leave blank if not used)
+OLLAMA_BASE_URL=
+
+# vLLM local LLM engine (leave blank if not used)
+VLLM_BASE_URL=
 ```
-
-* `MONGODB_URI`: Your MongoDB Atlas connection string.
-* `EMBEDDING_MODEL`: The name of the embedding model.
-* `DB_NAME`: Database name in MongoDB.
-* `DB_COLLECTION`: Collection name within the database.
-* `GEMINI_KEY`: API key for Gemini.
-* `QDRANT_API` and `QDRANT_URL`: Only needed if you’re using Qdrant Cloud.
-
 ---
 
 #### 3. Data Preparation
@@ -89,8 +141,9 @@ Prepare your data as shown below:
 
 ![Data Format](https://storage.googleapis.com/mle-courses-prod/users/61b869ca9c3c5e00292bb42d/private-files/36777950-2a04-11ef-bde4-3b0f2c27b69f-Screen_Shot_2024_06_14_at_11.10.39.png)
 
-> Make sure to create a **Vector Search Index** in MongoDB Atlas.
-> 🎥 [Watch how to do it](https://youtu.be/jZ4hN4evesg?si=ZbXAMlQ4dsBQU_oI&t=2076)
+> Make sure to create a **Vector Search Index** in MongoDB Atlas. 🎥 [Watch how to do it](https://youtu.be/jZ4hN4evesg?si=ZbXAMlQ4dsBQU_oI&t=2076)
+
+> Guide for Qdrant will be updated soon
 
 ---
 
@@ -123,9 +176,24 @@ Trả lời câu hỏi dựa vào các thông tin sản phẩm dưới đây:
 
 #### 5. Run the Server
 
+##### Use openai model online
+
 ```bash
-python serve.py
+python serve.py --mode online --model_name openai --model_version gpt-4o
 ```
+
+##### Use Gemini model in online mode
+
+```bash
+python serve.py --mode online --model_name gemini --model_version gemini-2.0-flash
+```
+
+##### Run Ollama with the local model mistralai/Mistral-7B-Instruct-v0.2
+
+```bash
+python serve.py --mode offline --model_engine ollama --model_version mistralai/Mistral-7B-Instruct-v0.2
+```
+
 
 ---
 
@@ -153,8 +221,12 @@ python ./test/integrationTest/llm-answer/test_bleu.py
 ```
 
 Current evaluation
-- Retrieval
-   - Hit@K
-- LLM Answer
-   - BLEU test
-   - ROUGE test
+- Integration Test
+   - Retrieval
+      - Hit@K
+   - Rerank
+      - nCDG
+   - LLM Answer
+      - BLEU test
+      - ROUGE test
+- Unit Test (Updating...)

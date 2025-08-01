@@ -50,6 +50,8 @@ class SearchAPIROUGETest(unittest.TestCase):
             # Extract text from response structure
             if "parts" in response_data and len(response_data["parts"]) > 0:
                 return response_data["parts"][0].get("text", "")
+            elif "content" in response_data and len(response_data["content"]) > 0:
+                return response_data["content"]
             else:
                 return ""
                 

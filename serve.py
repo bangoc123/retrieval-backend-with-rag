@@ -182,12 +182,8 @@ def main(args):
             response = llm.generate_content(data)
         
         return jsonify({
-            'parts': [
-                {
-                'text': response
-                }
-            ],
-            'role': 'model'
+            'content': response,
+            'role': 'assistant'
             })
     app.run(host='0.0.0.0', port=5002, debug=True)
 
