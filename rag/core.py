@@ -7,17 +7,18 @@ from typing import Optional, Literal
 from qdrant_client import QdrantClient, models
 from qdrant_client.http.models import Distance, VectorParams
 from qdrant_client import models, QdrantClient
+import chromadb
 
 class RAG():
     def __init__(self, 
             llm,
-            type: Literal['mongodb', 'qdrant'],
+            type: Literal['chromadb','mongodb', 'qdrant'],
             mongodbUri: Optional[str] = None,
             qdrant_api: Optional[str] = None,
             qdrant_url: Optional[str] = None,
             dbName: Optional[str] = None,
             dbCollection: Optional[str] = None,
-            embeddingName: str ='keepitreal/vietnamese-sbert',
+            embeddingName: str ='Alibaba-NLP/gte-multilingual-base',
         ):
         self.type = type
         if self.type == 'mongodb':
@@ -27,11 +28,19 @@ class RAG():
         elif self.type == 'qdrant':
             self.qdrant_api = qdrant_api
             self.qdrant_url = qdrant_url
-            self.qdrant_collection = embeddingName.split('/')[1]
+            self.qdrant_collection = embeddingName.split('/')[-1]
             self.client = QdrantClient(
                             url=self.qdrant_url,
                             api_key=self.qdrant_api
-                            ) 
+                            )
+        else:
+            self.type = 'chromadb'
+            self.client = chromadb.PersistentClient(path="./chroma_db")
+            self.chromadb_collection_name = embeddingName.split('/')[-1] 
+            if self._collection_exists:
+                self.chromadb_collection = self.client.get_collection(name=self.chromadb_collection_name)
+
+
         self.embedding_model = SentenceTransformerEmbedding(
             EmbeddingConfig(name=embeddingName)
         )
@@ -46,15 +55,21 @@ class RAG():
 
     def _collection_exists(self):           
         """
-        Check if Qdrant collection is exists
+        Check if collection is exists (For qdrant or chromadb)
         """
-
-        try:
-            collections = self.client.get_collections().collections
-            collection_names = [col.name for col in collections]
-            return self.collection_name in collection_names
-        except Exception as e:
-            return False
+        if self.type == "qdrant":
+            try:
+                collections = self.client.get_collections().collections
+                collection_names = [col.name for col in collections]
+                return self.qdrant_collection in collection_names
+            except Exception as e:
+                return False
+        else:
+            try:
+                self.client.get_collection(name=self.chromadb_collection_name)
+                return True
+            except ValueError:
+                return False
     def vector_search(
             self, 
             user_query: str, 
@@ -85,10 +100,10 @@ class RAG():
                 )               
                 results = []
                 for hit in hits:
-                    results.append(hit.payload)
+                    results.append({'_id': hit.payload['_id'], 'combined_information': hit.payload['combined_information'], 'score': hit.score})
                 return results
             else: 
-                print(f"Collection is not exist")
+                print(f"Collection {self.qdrant_collection} does not exist")
                 return
         elif self.type == 'mongodb':
             vector_search_stage = {
@@ -126,38 +141,59 @@ class RAG():
     
             return list(results)
 
-    def enhance_prompt(self, query):
-        get_knowledge = self.vector_search(query, 10)
-        enhanced_prompt = ""
-        i = 0
-        for result in get_knowledge:
-            if result.get('title'):
-                i += 1
-                enhanced_prompt += f"\n{i}) Tên: {result.get('title')}"
+        else:
+            query_vector = self.embedding_model.encode(user_query).tolist()
+    
+            hits = self.chromadb_collection.query(
+                query_embeddings=[query_vector],
+                n_results=limit
+            )
+                
+            results = []
+            for i in range(len(hits['ids'][0])):
+                distance = hits['distances'][0][i]
+                simlarity = 1 - distance 
 
-                # Price 
-                if result.get('current_price'):
-                    enhanced_prompt += f", Giá: {result.get('current_price')}"
-                else:
-                    enhanced_prompt += f", Giá: Không có thông "
-                # Promotion
-                if result.get('product_promotion'):
-                    enhanced_prompt += f", Ưu đãi: {result['product_promotion']}"
-                else:
-                    enhanced_prompt += ", Ưu đãi: Không có thông tin"
+                result = {
+                    "_id": hits['ids'][0][i],
+                    "combined_information": hits['documents'][0][i],
+                    "score": simlarity
+                }
+                results.append(result)
+            return results
 
-                # Specifications
-                if result.get('product_specs'):
-                    enhanced_prompt += f", Thông số: {result['product_specs']}"
-                else:
-                    enhanced_prompt += ", Thông số: Không có thông tin"
+    # def enhance_prompt(self, query):
+    #     get_knowledge = self.vector_search(query, 10)
+    #     enhanced_prompt = ""
+    #     i = 0
+    #     for result in get_knowledge:
+    #         if result.get('title'):
+    #             i += 1
+    #             enhanced_prompt += f"\n{i}) Tên: {result.get('title')}"
 
-                # Color options
-                if result.get('color_options'):
-                    enhanced_prompt += f", Màu sắc: {result['color_options']}"
-                else:
-                    enhanced_prompt += ", Màu sắc: Không có thông tin"
-        return enhanced_prompt
+    #             # Price 
+    #             if result.get('current_price'):
+    #                 enhanced_prompt += f", Giá: {result.get('current_price')}"
+    #             else:
+    #                 enhanced_prompt += f", Giá: Không có thông "
+    #             # Promotion
+    #             if result.get('product_promotion'):
+    #                 enhanced_prompt += f", Ưu đãi: {result['product_promotion']}"
+    #             else:
+    #                 enhanced_prompt += ", Ưu đãi: Không có thông tin"
+
+    #             # Specifications
+    #             if result.get('product_specs'):
+    #                 enhanced_prompt += f", Thông số: {result['product_specs']}"
+    #             else:
+    #                 enhanced_prompt += ", Thông số: Không có thông tin"
+
+    #             # Color options
+    #             if result.get('color_options'):
+    #                 enhanced_prompt += f", Màu sắc: {result['color_options']}"
+    #             else:
+    #                 enhanced_prompt += ", Màu sắc: Không có thông tin"
+    #     return enhanced_prompt
 
     def generate_content(self, prompt):
         return self.llm.generate_content(prompt)

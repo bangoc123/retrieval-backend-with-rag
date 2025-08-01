@@ -3,7 +3,7 @@ from sentence_transformers import CrossEncoder
 import numpy as np
 
 class Reranker():
-    def __init__(self, model_name: str = "BAAI/bge-reranker-v2-m3"):
+    def __init__(self, model_name: str = "Alibaba-NLP/gte-multilingual-reranker-base"):
         self.reranker = CrossEncoder(model_name, trust_remote_code=True)
 
     def __call__(self, query: str, passages: list[str]) -> tuple[list[float], list[str]]:
