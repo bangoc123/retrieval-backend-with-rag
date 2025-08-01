@@ -35,6 +35,10 @@ class ValueNotFoundError(Exception):
         self.name = name 
         super().__init__(f"Please make sure you have {name} in .env")
 
+class DataNotFoundError(Exception):
+    def __init__(self):
+        super().__init__(f"Please make sure you have valid CSV file in folder data")
+
 def main(args):
 
     # --- Semantic Router Setup --- #
@@ -154,12 +158,38 @@ def main(args):
             except Exception as e:
                 print(f"Error checking ChromaDB collection: {e}")
                 return False
+        def csv_exists(folder_path: str) -> list:
+            """
+            Check if any CSV file exists in the given folder and return their file path.
 
+            Args:
+                folder_path (str): Path to the folder (e.g., "./data")
+
+            Returns:
+                list: list of csv files.    
+            """
+            if not os.path.isdir(folder_path):
+                return []
+
+            csv_paths = [
+                os.path.abspath(os.path.join(folder_path, file))
+                for file in os.listdir(folder_path)
+                if file.lower().endswith(".csv") and os.path.isfile(os.path.join(folder_path, file))
+            ]
+            return csv_paths
+        
         if not chromadb_collection_exists(collection_name=args.embedding_model.split('/')[-1]):
-            print(f"The collection {args.embedding_model.split('/')[-1]} does not exist.\n")
-            print("Starting to create new collection. Please make sure you have a valid CSV file in ./data.\n")
-            load_csv_to_chromadb(csv_path="data/hoanghamobile.csv",persist_dir="./chroma_db", model_name=args.embedding_model)
-            print("The data insert process is complete.")
+            csv_files = csv_exists(folder_path="data")
+            if len(csv_files) == 0:
+                raise DataNotFoundError
+            else:
+                print(f"The collection {args.embedding_model.split('/')[-1]} does not exist.\n")
+                print("Starting to create new collection. Please make sure you have a valid CSV file in data folder.\n")
+                print(f"Detected {len(csv_files)} csv files.\n")
+                for i in  range(len(csv_files)):              
+                    load_csv_to_chromadb(csv_path=csv_files[i], persist_dir="./chroma_db", model_name=args.embedding_model)
+                    print(f"Processed {i+1} files.\n")  
+                print("The data insert process is complete.")
 
         rag = RAG(
             type='chromadb',
