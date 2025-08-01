@@ -6,19 +6,16 @@ from sentence_transformers import SentenceTransformer
 import argparse
 import os 
 
-FOLDER_PATH = "./data"
-
 class DataNotFoundError(Exception):
     def __init__(self):
-        super().__init__(f"Please make sure you have valid CSV file in ./data")
+        super().__init__(f"Please make sure you have valid CSV file")
 
-def csv_exists(folder_path: str, file_name: str) -> bool:
+def csv_exists(file_name: str) -> bool:
     """
-    Check if a CSV file exists in the given folder.
+    Check if a CSV file exists.
 
     Args:
-        folder_path (str): Path to the folder (e.g., "./data")
-        filename (str): Name of the file (e.g., "products.csv")
+        filename (str): Absolute path of the file (e.g., "C:/Users/products.csv")
 
     Returns:
         bool: True if file exists, False otherwise
@@ -26,14 +23,13 @@ def csv_exists(folder_path: str, file_name: str) -> bool:
     if not file_name.endswith(".csv"):
         raise ValueError("Filename must end with .csv")
     
-    full_path = os.path.join(folder_path, file_name)
-    return os.path.isfile(full_path)
+    return os.path.isfile(file_name)
 
 
 def load_csv_to_chromadb(csv_path: str, persist_dir: str = "./chroma_db", model_name: str = "Alibaba-NLP/gte-multilingual-base"):
     # Load CSV
-    if csv_exists(folder_path=FOLDER_PATH, file_name=csv_path.split('/')[-1]):
-        df = pd.read_csv(os.path.join(FOLDER_PATH, csv_path.split('/')[-1]))
+    if csv_exists(file_name=csv_path):
+        df = pd.read_csv(csv_path)
     else:
         raise DataNotFoundError
 
