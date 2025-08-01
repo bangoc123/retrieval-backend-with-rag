@@ -251,7 +251,7 @@ if __name__ == "__main__":
     model_group.add_argument('-v','--model_version', type=str, required=True, help='Define model version of LLM model (Optional)')
 
     feature_group = parser.add_argument_group("Feature Option")
-    feature_group.add_argument('--db', type=str, choices=['qdrant', 'mongodb', 'chromadb'], default='qdrant', help='Choose type of vector store database')
+    feature_group.add_argument('--db', type=str, choices=['qdrant', 'mongodb', 'chromadb'], default='chromadb', help='Choose type of vector store database')
     feature_group.add_argument('--embedding_model', type=str, default='Alibaba-NLP/gte-multilingual-base', help='Declare what embedding model to use for RAG')
     feature_group.add_argument('--reranker', type=str, default='Alibaba-NLP/gte-multilingual-reranker-base', help='Declare name of CrossEncoder ReRanker')
 
