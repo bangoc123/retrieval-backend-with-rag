@@ -5,6 +5,7 @@ import sys
 import numpy as np
 from dotenv import load_dotenv
 import shutil
+import gdown
 
 # Path setup
 current_path = os.path.dirname(__file__)
@@ -27,8 +28,16 @@ class ChromaDBVectorSearchTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        
+        # Download data
+        url =  "https://drive.google.com/file/d/1LgSkDWQhKx9KYZD-kpmDjgxJRaksVeSs/view?usp=sharing"
+        data_dir = os.path.join(project_root, 'data')
+        data_path = os.path.join(data_dir, 'data.csv')
+        cls.data_path = data_path
+        gdown.download(url, data_path, quiet=False, fuzzy=True)
+
         # Build local chromadb
-        load_csv_to_chromadb(csv_path=r"C:\Users\huyho\OneDrive\Desktop\retrieval-backend-with-rag\data\hoanghamobile.csv",persist_dir="./chroma_db")
+        load_csv_to_chromadb(csv_path=data_path,persist_dir="./chroma_db")
         llm = None
         cls.rag = RAG(
             type="chromadb",
@@ -37,7 +46,6 @@ class ChromaDBVectorSearchTest(unittest.TestCase):
         )
 
     def setUp(self):
-        self.test_csv = r"C:\Users\huyho\OneDrive\Desktop\retrieval-backend-with-rag\data\hoanghamobile.csv"
         self.persist_dir = "./chroma_db"
         self.model_name = "Alibaba-NLP/gte-multilingual-base"
 
@@ -50,9 +58,9 @@ class ChromaDBVectorSearchTest(unittest.TestCase):
             )
             # Expect result has passage and score
             self.assertIsInstance(results, list, "The results return format must be list")
-            self.assertEqual(results[0]['score'], 0.637414276599884)
-            self.assertEqual(results[1]['score'], 0.6004382371902466)
-            self.assertEqual(results[2]['score'], 0.5986143350601196)
+            self.assertEqual(results[0]['_id'], "666baeb69793e149fe739413")
+            self.assertEqual(results[1]['_id'], "666baeb69793e149fe739409")
+            self.assertEqual(results[2]['_id'], "666baeb69793e149fe73940a")
             print("Test Passed")
         except Exception as e:
             print(f"❌ Test failed with error: {e}")
@@ -65,6 +73,10 @@ class ChromaDBVectorSearchTest(unittest.TestCase):
             for i in range(len(collections)):
                 client.delete_collection(collections[i].name)
         print("Deleted collections after unittest")
+
+        if os.path.exists(self.data_path):
+            os.remove(self.data_path)
+            print("Removed test CSV")
 
     @classmethod
     def tearDownClass(cls):
