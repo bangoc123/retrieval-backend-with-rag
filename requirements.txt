@@ -16,3 +16,4 @@ ragas==0.3.0
 sacrebleu==2.5.1 
 qdrant-client
 chromadb==1.0.12
+gdown==5.2.0
