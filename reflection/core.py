@@ -21,20 +21,15 @@ class Reflection():
 
         historyString = self._concat_and_format_texts(chatHistory)
 
-        higherLevelSummariesPrompt = """Given a chat history and the latest user question which might reference context in the chat history, formulate a standalone question in Vietnamese which can be understood without the chat history. Do NOT answer the question, just reformulate it if needed and otherwise return it as is. {historyString}
+        higherLevelSummariesPrompt = {
+            "role": "user",
+            "content": """Given a chat history and the latest user question which might reference context in the chat history, formulate a standalone question in Vietnamese which can be understood without the chat history. Do NOT answer the question, just reformulate it if needed and otherwise return it as is. {historyString}
         """.format(historyString=historyString)
+        }
 
         print(higherLevelSummariesPrompt)
 
-        completion = self.llm.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {
-                    "role": "user",
-                    "content": higherLevelSummariesPrompt
-                }
-            ]
-        )
+        completion = self.llm.generate_content([higherLevelSummariesPrompt])
     
-        return completion.choices[0].message.content
+        return completion
 
