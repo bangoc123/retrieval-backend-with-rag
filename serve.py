@@ -4,7 +4,7 @@ import os
 import google.generativeai as genai
 from flask_cors import CORS
 from rag.core import RAG
-from embeddings import OpenAIEmbedding
+from embeddings import SentenceTransformerEmbedding, EmbeddingConfig
 from semantic_router import SemanticRouter, Route
 from semantic_router.samples import productsSample, chitchatSample
 import google.generativeai as genai
@@ -14,6 +14,7 @@ from re_rank import Reranker
 from llms.llms import LLMs
 import argparse
 import warnings
+from insert_data import load_csv_to_chromadb
 
 # Load environment variables from .env file
 load_dotenv()
@@ -34,6 +35,10 @@ class ValueNotFoundError(Exception):
         self.name = name 
         super().__init__(f"Please make sure you have {name} in .env")
 
+class DataNotFoundError(Exception):
+    def __init__(self):
+        super().__init__(f"Please make sure you have valid CSV file in folder data")
+
 def main(args):
 
     # --- Semantic Router Setup --- #
@@ -42,11 +47,11 @@ def main(args):
     PRODUCT_ROUTE_NAME = 'products' 
     CHITCHAT_ROUTE_NAME = 'chitchat'
 
-    openAIEmbeding = OpenAIEmbedding(apiKey=os.getenv('OPEN_AI_KEY'), dimensions=1024, name=args.openai_embedding)
+    sentenceTransformerEmbedding = SentenceTransformerEmbedding(config=EmbeddingConfig(name=args.embedding_model))
     productRoute = Route(name=PRODUCT_ROUTE_NAME, samples=productsSample)
     chitchatRoute = Route(name=CHITCHAT_ROUTE_NAME, samples=chitchatSample)
-    semanticRouter = SemanticRouter(openAIEmbeding, routes=[productRoute, chitchatRoute])
-
+    semanticRouter = SemanticRouter(sentenceTransformerEmbedding, routes=[productRoute, chitchatRoute])
+    
     # --- End Semantic Router Setup --- #
 
     # --- Set up LLMs --- #
@@ -135,13 +140,62 @@ def main(args):
             raise ValueNotFoundError(f"MONGODB_NAME and MONGODB_COLLECTION")
         
         rag = RAG(
+            type='mongodb',
             mongodbUri=MONGODB_URI,
             dbName=MONGODB_NAME,
             dbCollection=MONGODB_COLLECTION,
             embeddingName=args.embedding_model,
             llm=llm,
         )
+    else:
 
+        def chromadb_collection_exists(collection_name: str, persist_dir: str = "./chroma_db") -> bool:
+            try:
+                import chromadb
+                client = chromadb.PersistentClient(path=persist_dir)
+                collections = client.list_collections()
+                return any(col.name == collection_name for col in collections)
+            except Exception as e:
+                print(f"Error checking ChromaDB collection: {e}")
+                return False
+        def csv_exists(folder_path: str) -> list:
+            """
+            Check if any CSV file exists in the given folder and return their file path.
+
+            Args:
+                folder_path (str): Path to the folder (e.g., "./data")
+
+            Returns:
+                list: list of csv files.    
+            """
+            if not os.path.isdir(folder_path):
+                return []
+
+            csv_paths = [
+                os.path.abspath(os.path.join(folder_path, file))
+                for file in os.listdir(folder_path)
+                if file.lower().endswith(".csv") and os.path.isfile(os.path.join(folder_path, file))
+            ]
+            return csv_paths
+        
+        if not chromadb_collection_exists(collection_name=args.embedding_model.split('/')[-1]):
+            csv_files = csv_exists(folder_path="data")
+            if len(csv_files) == 0:
+                raise DataNotFoundError
+            else:
+                print(f"The collection {args.embedding_model.split('/')[-1]} does not exist.\n")
+                print("Starting to create new collection. Please make sure you have a valid CSV file in data folder.\n")
+                print(f"Detected {len(csv_files)} csv files.\n")
+                for i in  range(len(csv_files)):              
+                    load_csv_to_chromadb(csv_path=csv_files[i], persist_dir="./chroma_db", model_name=args.embedding_model)
+                    print(f"Processed {i+1} files.\n")  
+                print("The data insert process is complete.")
+
+        rag = RAG(
+            type='chromadb',
+            embeddingName=args.embedding_model,
+            llm=llm
+        )
     # Initialize ReRanker
     reranker = Reranker(model_name=args.reranker)
 
@@ -169,7 +223,7 @@ def main(args):
             source_information = ""
             for i in range(len(ranked_passages)):
                 source_information += f"{i+1} {ranked_passages[i]}\n"
-            print(source_information)
+
             combined_information = f"Hãy trở thành chuyên gia tư vấn bán hàng cho một cửa hàng điện thoại. Câu hỏi của khách hàng: {query}\nTrả lời câu hỏi dựa vào các thông tin sản phẩm dưới đây: {source_information}."
             data.append({
                 "role": "user",
@@ -197,10 +251,9 @@ if __name__ == "__main__":
     model_group.add_argument('-v','--model_version', type=str, required=True, help='Define model version of LLM model (Optional)')
 
     feature_group = parser.add_argument_group("Feature Option")
-    feature_group.add_argument('--db', type=str, choices=['qdrant', 'mongodb'], default='qdrant', help='Choose type of vector store database')
+    feature_group.add_argument('--db', type=str, choices=['qdrant', 'mongodb', 'chromadb'], default='chromadb', help='Choose type of vector store database')
     feature_group.add_argument('--embedding_model', type=str, default='Alibaba-NLP/gte-multilingual-base', help='Declare what embedding model to use for RAG')
-    feature_group.add_argument('--reranker', type=str, default='BAAI/bge-reranker-v2-m3', help='Declare name of CrossEncoder ReRanker')
-    feature_group.add_argument('--openai_embedding', type=str, default='text-embedding-3-small', help='Declare OpenAI Embedding model')
+    feature_group.add_argument('--reranker', type=str, default='Alibaba-NLP/gte-multilingual-reranker-base', help='Declare name of CrossEncoder ReRanker')
 
     args = parser.parse_args()
     main(args)
