@@ -87,7 +87,7 @@ def benchmark_from_csv(args):
 
     for idx, row in df.iterrows():
         data = {"role": "user", "content": row["query"]}
-        query_id = row["_id"]
+        query_id = row["_id"]   
 
         print(f"\n[Query ID: {query_id}] Running inference...")
 
@@ -110,6 +110,7 @@ def benchmark_from_csv(args):
     result_df.to_csv(f"benchmark_results_{args.model_version.split('/')[-1]}_{args.model_engine}.csv", index=False)
     print(f"\n✅ Benchmarking completed. Results saved to benchmark_inference_time_{args.model_version.split('/')[-1]}_{args.model_engine}.csv.")
     print(f"Total time to run inference for {len(df)} queries in dataset: {total_time}")
+    print(f"Average time to run inference for {len(df)} queries in dataset: {(total_time/len(df)):.4f}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Arguments for serve.py")
@@ -118,7 +119,7 @@ if __name__ == "__main__":
     parser.add_argument('-m','--mode', type=str, choices=['online', 'offline'], default='offline', help='Choose either online or offline mode system')
     parser.add_argument('-n','--model_name', type=str, default=None, help='Define name of LLM model to use')
     parser.add_argument('-e','--model_engine', type=str, default='huggingface', help='Define model engine of LLM model (Optional)')
-    parser.add_argument('-v','--model_version', type=str, default='Qwen/Qwen3-0.6B', help='Define model version of LLM model (Optional)')
+    parser.add_argument('-v','--model_version', type=str, required=True, help='Define model version of LLM model (Optional)')
 
     args = parser.parse_args()
     benchmark_from_csv(args)
