@@ -230,7 +230,6 @@ def main(args):
                 "role": "user",
                 "content": combined_information
             })
-            print(f"Data: {data}")
             response = rag.generate_content(data)
         else:
             # Guide to LLMs
