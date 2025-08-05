@@ -105,8 +105,8 @@ def main(args):
 
     # --- Relection Setup --- #
 
-    gpt = openai.OpenAI(api_key=os.getenv('OPEN_AI_KEY'))
-    reflection = Reflection(llm=gpt)
+    # gpt = openai.OpenAI(api_key=os.getenv('OPEN_AI_KEY'))
+    reflection = Reflection(llm=llm)
 
     # --- End Reflection Setup --- #
 
