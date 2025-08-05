@@ -18,6 +18,7 @@ from insert_data import load_csv_to_chromadb
 
 # Load environment variables from .env file
 load_dotenv()
+os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 
 # Add custom exception
 class URLNotFoundError(Exception):
@@ -93,11 +94,11 @@ def main(args):
         if not MODEL_BASE_URL:
             raise URLNotFoundError("VLLM_BASE_URL")
 
-    elif args.mode == "offline" and args.model_engine == None:
+    elif args.mode == "offline" and args.model_engine == "huggingface":
         MODEL_API_KEY = None
         MODEL_BASE_URL = None
-        if not MODEL_BASE_URL:
-            raise URLNotFoundError("VLLM_BASE_URL or OLLAMA_BASE_URL")
+        # if not MODEL_BASE_URL:
+        #     raise URLNotFoundError("VLLM_BASE_URL or OLLAMA_BASE_URL")
 
     llm = LLMs(type=args.mode, model_version=args.model_version, model_name=args.model_name, engine=args.model_engine, base_url=MODEL_BASE_URL, api_key=MODEL_API_KEY)
 
@@ -229,6 +230,7 @@ def main(args):
                 "role": "user",
                 "content": combined_information
             })
+            print(f"Data: {data}")
             response = rag.generate_content(data)
         else:
             # Guide to LLMs
@@ -247,7 +249,7 @@ if __name__ == "__main__":
     model_group = parser.add_argument_group("Model Option")
     model_group.add_argument('-m','--mode', type=str, choices=['online', 'offline'], default='online', help='Choose either online or offline mode system')
     model_group.add_argument('-n','--model_name', type=str, default='gemini', help='Define name of LLM model to use')
-    model_group.add_argument('-e','--model_engine', type=str, default='ollama', help='Define model engine of LLM model (Optional)')
+    model_group.add_argument('-e','--model_engine', type=str, default='huggingface', help='Define model engine of LLM model (Optional)')
     model_group.add_argument('-v','--model_version', type=str, required=True, help='Define model version of LLM model (Optional)')
 
     feature_group = parser.add_argument_group("Feature Option")
