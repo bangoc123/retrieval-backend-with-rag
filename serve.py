@@ -246,7 +246,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Arguments for serve.py")
 
     model_group = parser.add_argument_group("Model Option")
-    model_group.add_argument('-m','--mode', type=str, choices=['online', 'offline'], default='online', help='Choose either online or offline mode system')
+    model_group.add_argument('-m','--mode', type=str, choices=['online', 'offline'], default='offline', help='Choose either online or offline mode system')
     model_group.add_argument('-n','--model_name', type=str, default='gemini', help='Define name of LLM model to use')
     model_group.add_argument('-e','--model_engine', type=str, default='huggingface', help='Define model engine of LLM model (Optional)')
     model_group.add_argument('-v','--model_version', type=str, required=True, help='Define model version of LLM model (Optional)')
