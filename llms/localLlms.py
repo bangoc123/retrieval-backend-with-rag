@@ -2,6 +2,7 @@ import requests
 import re
 from typing import List, Dict
 from transformers import AutoModelForCausalLM, AutoTokenizer
+import torch
 class LocalLLMs:
     def __init__(self, engine: str, model_version: str, base_url: str = None):
         """ Initialize the LocalLLMs class 
@@ -78,6 +79,8 @@ class LocalLLMs:
     
     def _initialize_huggingface_model(self, model_version: str):
         """Initialize the Huggingface model with the specified name and parameters"""
+
+        device = "cuda" if torch.cuda.is_available() else "cpu"
         self.tokenizer = AutoTokenizer.from_pretrained(
                         model_version,
                         trust_remote_code=True,
@@ -91,7 +94,7 @@ class LocalLLMs:
             torch_dtype="auto",
             device_map="auto",
             trust_remote_code = True
-        )
+        ).to(device)
         self.client.eval()
 
     def remove_think_blocks(self,text):
