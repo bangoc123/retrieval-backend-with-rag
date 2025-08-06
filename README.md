@@ -18,6 +18,15 @@ LLM Answer Benchmarks
 
 🔗 [Details](https://protonx.coursemind.io/courses/684d3a8bb224570012d03b22/topics/684f965f904b370012b6a553)
 
+Groundedness Benchmarks
+
+Groundedness measures how well a model’s responses are supported by the provided context or reliable sources, ensuring accuracy and reducing hallucinations.
+
+![G-b](https://storage.googleapis.com/mle-courses-prod/users/61b6fa1ba83a7e37c8309756/private-files/bc772d80-71e2-11f0-ae39-5b0a81678d54-Screenshot_2025-08-05_165745.png)
+
+View details about this benchmarks [here](https://protonx.coursemind.io/courses/684d3a8bb224570012d03b22/topics/684f965f904b370012b6a553?activeAId=6866366ff7c7a147467c6140)
+
+
 ---
 
 ### Slides
@@ -222,11 +231,13 @@ python ./test/integrationTest/llm-answer/test_bleu.py
 
 Current evaluation
 - Integration Test
-   - Retrieval
-      - Hit@K
-   - Rerank
-      - nCDG
    - LLM Answer
       - BLEU test
       - ROUGE test
-- Unit Test (Updating...)
+- Unit Test
+   - Test vector search
+     - Retrieval
+      - Hit@K
+   - Rerank
+      - nCDG
+   - Test Reflection
