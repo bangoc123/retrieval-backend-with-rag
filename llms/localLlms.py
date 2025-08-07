@@ -164,8 +164,12 @@ class LocalLLMs:
 
                     generated_ids = self.client.generate(
                         **model_inputs,
-                        max_new_tokens=16384,
+                        max_new_tokens=1024,  #16384, 8192
+                        do_sample=True,
+                        temperature=0.7,
+                        top_p=0.9,
                         pad_token_id=self.tokenizer.eos_token_id,
+                        eos_token_id=self.tokenizer.eos_token_id,
                         use_cache=True
                     )
                 output_ids = generated_ids[0][len(model_inputs.input_ids[0]):].tolist() 
