@@ -203,6 +203,11 @@ python serve.py --mode online --model_name gemini --model_version gemini-2.0-fla
 python serve.py --mode offline --model_engine ollama --model_version mistralai/Mistral-7B-Instruct-v0.2
 ```
 
+##### Run HuggingFace backend with the local model mistralai/Mistral-7B-Instruct-v0.2
+
+```bash
+python serve.py --mode offline --model_engine huggingface --model_version mistralai/Mistral-7B-Instruct-v0.2
+```
 
 ---
 
