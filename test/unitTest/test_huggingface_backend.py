@@ -26,7 +26,7 @@ class HuggingFaceBackendTest(unittest.TestCase):
     
     @classmethod
     def setUpClass(cls):
-        cls.llm = LLMs(type="offline", model_version="Qwen/Qwen3-0.6B", engine="huggingface")
+        cls.llm = LLMs(type="offline", model_version="mistralai/Mistral-7B-Instruct-v0.2", engine="huggingface")
     
     def setUp(self):
         return super().setUp()
