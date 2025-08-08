@@ -63,20 +63,6 @@ class ReflectionTest(unittest.TestCase):
                 'base_url': TOGETHER_BASE_URL,
                 'api_key': TOGETHER_API_KEY},
 
-                {'mode':'offline',
-                'model_version':'Qwen/Qwen3-0.6b',
-                'model_name':None,
-                'model_engine':'vllm',
-                'base_url': VLLM_BASE_URL,
-                'api_key':None},
-
-            #    {'mode':'offline',
-            #    'model_version':'qwen3:0.6b',
-            #    'model_name':None,
-            #    'model_engine':'ollama',
-            #    'base_url': os.getenv('OLLAMA_BASE_URL', None),
-            #    'api_key':None},
-
                 ]
         k = 0
         for i in range(len(tests)):

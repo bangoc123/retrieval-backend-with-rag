@@ -3,12 +3,12 @@ from llms.onlinesLlms import OnLineLLMs
 from typing import List, Dict
 
 class LLMs:
-    def __init__(self, type : str, model_version: str, model_name : str = None, engine : str = None, api_key : str = None, base_url: str = None):
+    def __init__(self, type : str, model_version: str, model_name : str = None, engine : str = None, api_key : str = None, base_url: str = None, **kwargs):
         """Initialize object LocalLLMs or OnlineLLMs with the provided configuration.
             not return 
         """
         if type == "offline":
-            self.llm = LocalLLMs(engine=engine, model_version=model_version, base_url=base_url)
+            self.llm = LocalLLMs(engine=engine, model_version=model_version, base_url=base_url, **kwargs)
         elif type == "online":
             self.llm = OnLineLLMs(model_name=model_name, api_key=api_key, model_version=model_version, base_url=base_url)
         else:

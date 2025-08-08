@@ -105,7 +105,7 @@ And return a response in the following format:
 
 #### 1. Installation
 
-Requires Python >= 3.9
+Requires Python >= 3.12
 
 ```bash
 pip install -r requirements.txt
@@ -207,6 +207,12 @@ python serve.py --mode offline --model_engine ollama --model_version mistralai/M
 
 ```bash
 python serve.py --mode offline --model_engine huggingface --model_version mistralai/Mistral-7B-Instruct-v0.2
+```
+##### Run ONNX backend with the local model
+
+```bash
+python serve.py --mode offline --model_name TinyLLama --model_engine onnx --model_version onnx-community/TinyLLama-v0-ONNX
+
 ```
 
 ---
