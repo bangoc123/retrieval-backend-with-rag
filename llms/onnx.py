@@ -118,12 +118,24 @@ class ONNXModel:
                 
             except Exception as e:
                 print(f"⚠️ Could not auto-detect model config: {e}")
-                print("🔧 Using default TinyLLama-v0-ONNX configuration")
+                print("🔧 Using default Qwen3-0.6B configuration")
+                # Default fallback to Qwen3-0.6B specs
                 self.num_layers = 28
                 self.num_heads = 8  
                 self.head_dim = 128
 
- 
+    def set_architecture(self, num_layers: int, num_heads: int, head_dim: int):
+        """Manually set model architecture parameters
+        
+        Args:
+            num_layers (int): Number of transformer layers
+            num_heads (int): Number of attention heads
+            head_dim (int): Dimension of each attention head
+        """
+        self.num_layers = num_layers
+        self.num_heads = num_heads
+        self.head_dim = head_dim
+        print(f"🔧 Manual config set - Layers: {self.num_layers}, Heads: {self.num_heads}, Head dim: {self.head_dim}")
 
     def prepare_inputs(self, input_ids: np.ndarray, 
                       attention_mask: Optional[np.ndarray] = None,
@@ -209,7 +221,7 @@ class ONNXModel:
         
         return next_token_id, new_kv_cache
 
-    def generate(self, prompt: str, max_new_tokens: int = 50, 
+    def generate(self, prompt: str, max_new_tokens: int = 4096, 
                 temperature: float = 1.0, do_sample: bool = False) -> str:
         """Generate text using ONNX model
         
@@ -262,6 +274,8 @@ class ONNXModel:
         
         # Decode generated text
         generated_text = self.tokenizer.decode(generated_tokens, skip_special_tokens=True)
+
+
         full_text = prompt + generated_text
         completion_tokens = len(generated_tokens)
         total_tokens = prompt_tokens + completion_tokens
@@ -270,7 +284,7 @@ class ONNXModel:
         print(f"✅ Generated {completion_tokens} tokens in {elapsed:.3f}s "
           f"({tps:.2f} tok/s) | prompt={prompt_tokens}, total={total_tokens}")
 
-        return full_text
+        return generated_text
 
     def encode(self, text: str) -> np.ndarray:
         """Encode text to token IDs"""

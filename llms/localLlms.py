@@ -195,9 +195,9 @@ class LocalLLMs:
                     prompt_text += "<|im_start|>assistant\n"  # Model is expected to complete from here
                 else:
                     prompt_text = prompt  # Assume already formatted
+                
                 output = self.onnx_model.generate(prompt_text)
-
-                return output
+                return self.remove_think_blocks(output)
 
         except Exception as e:
             print(f"Đã xảy ra lỗi trong quá trình tạo nội dung: {e}")
