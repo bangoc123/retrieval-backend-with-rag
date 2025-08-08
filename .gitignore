@@ -12,3 +12,6 @@ chroma_db/
 data/*
 
 !data/.gitkeep
+
+test_onnx_models/
+onnx_models/

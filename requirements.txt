@@ -1,4 +1,5 @@
 Flask
+langchain==0.2.17
 python-dotenv
 pymongo
 sentence_transformers
@@ -18,3 +19,5 @@ qdrant-client
 chromadb==1.0.12
 gdown==5.2.0
 onnxruntime==1.22.1
+accelerate>=0.26.0
+transformers
