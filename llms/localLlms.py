@@ -1,7 +1,7 @@
 import requests
 import re
 from typing import List, Dict
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, DynamicCache
 import torch
 class LocalLLMs:
     def __init__(self, engine: str, model_version: str, base_url: str = None):
@@ -80,7 +80,7 @@ class LocalLLMs:
     def _initialize_huggingface_model(self, model_version: str):
         """Initialize the Huggingface model with the specified name and parameters"""
 
-        # device = "cuda" if torch.cuda.is_available() else "cpu"
+        device = "cuda:0" if torch.cuda.is_available() else "cpu"
         self.tokenizer = AutoTokenizer.from_pretrained(
                         model_version,
                         trust_remote_code=True,
@@ -94,7 +94,7 @@ class LocalLLMs:
             torch_dtype="auto",
             device_map="auto",
             trust_remote_code = True
-        )
+        ).to(device)
         self.client.eval()
 
     def remove_think_blocks(self,text):
@@ -159,6 +159,7 @@ class LocalLLMs:
 
                 model_inputs = self.tokenizer([text], return_tensors="pt").to(self.client.device)
 
+                # past_key_values = DynamicCache()
                 # conduct text completion
                 with torch.no_grad():
 
@@ -171,6 +172,7 @@ class LocalLLMs:
                         pad_token_id=self.tokenizer.eos_token_id,
                         eos_token_id=self.tokenizer.eos_token_id,
                         use_cache=True
+                        # cache_implementation="static"
                     )
                 output_ids = generated_ids[0][len(model_inputs.input_ids[0]):].tolist() 
 
@@ -180,4 +182,48 @@ class LocalLLMs:
         except Exception as e:
             print(f"Đã xảy ra lỗi trong quá trình tạo nội dung: {e}")
             raise
+    
+    def batch_generate_content(self, list_of_prompts: List[List[Dict[str,str]]]) -> List:
+
+        texts = [
+            self.tokenizer.apply_chat_template(
+                messages,
+                tokenize=False,
+                add_generation_prompt=True,
+                enable_thinking=False
+            )
+            for messages in list_of_prompts
+        ]
+
+        encodings = self.tokenizer(
+            texts,
+            return_tensors="pt",
+            padding=True,
+            truncation=True,
+            max_length=8192  # optional, safeguard
+        ).to(self.client.device)
+
+        # Step 3: Generate
+        with torch.no_grad():
+            outputs = self.client.generate(
+                **encodings,
+                max_new_tokens=1024,
+                do_sample=False,
+                pad_token_id=self.tokenizer.eos_token_id,
+                eos_token_id=self.tokenizer.eos_token_id,
+                # use_cache=True
+                # cache_implementation="static"
+            )
+
+        # Step 4: Post-process
+        decoded_outputs = []
+        for i in range(len(outputs)):
+            input_len = encodings.input_ids[i].shape[0]
+            generated_ids = outputs[i][input_len:]
+            decoded = self.tokenizer.decode(generated_ids, skip_special_tokens=True)
+            decoded_outputs.append(decoded)
+
+        return decoded_outputs
+
+
         
