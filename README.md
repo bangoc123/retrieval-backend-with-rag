@@ -215,6 +215,13 @@ python serve.py --mode offline --model_name TinyLLama --model_engine onnx --mode
 
 ```
 
+##### Run OpenVINO backend with the local model
+
+```bash
+python serve.py --mode offline --model_engine openvino --model_version  mistralai/Mistral-7B-Instruct-v0.2
+
+```
+
 ---
 
 #### 6. Test the API
