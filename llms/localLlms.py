@@ -3,8 +3,9 @@ import re
 from typing import List, Dict
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
+from llms.onnx import ONNXModel
 class LocalLLMs:
-    def __init__(self, engine: str, model_version: str, base_url: str = None):
+    def __init__(self, engine: str, model_version: str, base_url: str = None, **kwargs):
         """ Initialize the LocalLLMs class 
             Args:
             engine (str): "ollama" or "vllm".
@@ -14,13 +15,17 @@ class LocalLLMs:
         self.engine = engine
         self.model_version = model_version
         self.client = None
-        self.max_tokens = 4096  # Default max tokens
+        self.max_tokens = kwargs.get('max_tokens', 4096)  # Default max tokens
         if engine == "ollama":
             self.base_url = base_url 
             self._initialize_ollama_model(model_version)
         elif engine == "vllm":
             self.base_url = base_url
             self._initialize_vllm_model(model_version)
+        elif engine == "onnx":
+            local_dir = kwargs.get('local_dir', './onnx_models')
+            self.onnx_model = ONNXModel(model_version, local_dir)
+            self.client = self.onnx_model
         elif engine == "huggingface":
             self._initialize_huggingface_model(model_version)
         else:
@@ -93,7 +98,8 @@ class LocalLLMs:
             model_version,
             torch_dtype="auto",
             device_map="auto",
-            trust_remote_code = True
+            trust_remote_code = True,
+            low_cpu_mem_usage=True,
         ).to(device)
         self.client.eval()
 
@@ -161,10 +167,9 @@ class LocalLLMs:
 
                 # conduct text completion
                 with torch.no_grad():
-
                     generated_ids = self.client.generate(
                         **model_inputs,
-                        max_new_tokens=1024,  #16384, 8192
+                        max_new_tokens=self.max_tokens,
                         do_sample=True,
                         temperature=0.7,
                         top_p=0.9,
@@ -176,6 +181,23 @@ class LocalLLMs:
 
                 response_data = self.tokenizer.decode(output_ids, skip_special_tokens=True)
                 return self.remove_think_blocks(response_data)
+            elif self.engine == "onnx":
+                # TODO: Will find the prompt template of each model
+                if isinstance(prompt, list):
+                    prompt_text = ""
+                    for msg in prompt:
+                        if msg["role"] == "system":
+                            prompt_text += f"<|im_start|>system\n{msg['content']}<|im_end|>\n"
+                        elif msg["role"] == "user":
+                            prompt_text += f"<|im_start|>user\n{msg['content']}<|im_end|>\n"
+                        elif msg["role"] == "assistant":
+                            prompt_text += f"<|im_start|>assistant\n{msg['content']}<|im_end|>\n"
+                    prompt_text += "<|im_start|>assistant\n"  # Model is expected to complete from here
+                else:
+                    prompt_text = prompt  # Assume already formatted
+                
+                output = self.onnx_model.generate(prompt_text)
+                return self.remove_think_blocks(output)
 
         except Exception as e:
             print(f"Đã xảy ra lỗi trong quá trình tạo nội dung: {e}")
