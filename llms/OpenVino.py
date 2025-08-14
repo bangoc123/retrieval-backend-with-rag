@@ -5,7 +5,7 @@ from transformers import AutoTokenizer, AutoConfig
 from optimum.intel.openvino import OVModelForCausalLM
 import time
 import logging
-
+import torch
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -122,10 +122,10 @@ class OpenVINO:
             
             logger.info(f"Loading OVModelForCausalLM from {self.model_dir} on {self.device}")
             # Load OpenVINO model
-            self.model = OVModelForCausalLM.from_pretrained(self.model_dir).to(self.device)
+            self.model = OVModelForCausalLM.from_pretrained(self.model_dir, use_cache=True, task='text-generation-with-past')
 
             # Load tokenizer
-            self.tokenizer = AutoTokenizer.from_pretrained(self.model_dir, trust_remote_code=True)  
+            self.tokenizer = AutoTokenizer.from_pretrained(self.model_version, trust_remote_code=True)  
             if self.tokenizer.pad_token is None:
                 # set pad token to eos if missing
                 self.tokenizer.pad_token = self.tokenizer.eos_token
@@ -161,284 +161,104 @@ class OpenVINO:
         # If optimum wrapper supports .generate and returns numpy/tensors, we can use it directly
         self._has_generate = hasattr(self.model, "generate")
         logger.info("OpenVINO model loaded. has_generate=%s", self._has_generate)
+        print(f"DEBUG model.input_names: {self.model.input_names}")
+        print(f"DEBUG model.output_names: {self.model.output_names}")
 
-    def prepare_inputs(self, input_ids, 
+    def prepare_inputs(self, 
+                      input_ids, 
+                      past_key_values: Optional = None,
                       attention_mask: Optional = None,
-                      past_key_values: Optional[Dict] = None,
-                      position_ids: Optional = None):
-        """Prepare inputs for OpenVINO inference"""
-        batch_size, seq_length = input_ids.shape
+                      position_ids: Optional = None
+                      ):
+        if not self.use_kv_cache:
+            return {"input_ids": input_ids}
+        return {"input_ids": input_ids, "past_key_values": past_key_values} if past_key_values is not None else {"input_ids": input_ids}
 
-        inputs = {
-            'input_ids': input_ids
-        }
+        #=======================================================
 
-        # Attention mask
-        if attention_mask is None:
-            attention_mask = input_ids.new_ones((batch_size, seq_length))
-        
-        # Position IDs
-        if position_ids is None:
-            if past_key_values is None:
-                position_ids = input_ids.new_zeros((batch_size, seq_length))
-                for i in range(batch_size):
-                    position_ids[i] = input_ids.new_tensor(range(seq_length))
-            else:
-                # Get past length from KV cache
-                past_length = past_key_values[0][0].shape[2] if past_key_values else 0
-                position_ids = input_ids.new_tensor([[past_length] * seq_length] * batch_size)
+    def extract_kv_cache(self, outputs) -> Optional[Dict]:
+        if hasattr(outputs, "past_key_values"):
+            return outputs.past_key_values
+        if isinstance(outputs, dict) and "past_key_values" in outputs:
+            return outputs["past_key_values"]
+        return None
 
-        # Handle KV cache and attention mask extension
-        if past_key_values is not None:
-            past_length = past_key_values[0][0].shape[2]
-            total_seq_length = past_length + seq_length
-            
-            # Extend attention mask to include past
-            full_attention_mask = input_ids.new_ones((batch_size, total_seq_length))
-            inputs['attention_mask'] = full_attention_mask
-            inputs['past_key_values'] = past_key_values
-        else:
-            inputs['attention_mask'] = attention_mask
+    def generate_token(self, input_ids, past_key_values=None) -> Tuple[int, Optional[Dict]]:
 
-        inputs['position_ids'] = position_ids
-        return inputs
+        input_ids = torch.from_numpy(input_ids)
+        # print(f"DEBUG input_ids: {input_ids.type}")
+        # print(f"DEBUG past_key_values: {past_key_values}")
+        inputs = self.prepare_inputs(input_ids, past_key_values)
+        # print(f"DEBUG generate_token: input: {inputs}\n")
+        outputs = self.model(**inputs, use_cache=True)
+        # print(f"DEBUG outputs = {len(outputs)}")
+        # print(f"DEBUG outputs = {outputs[0].shape}")
+        # print(f"DEBUG outputs = {outputs[1]}")
+        # print(f"DEBUG generate_token: output: {outputs}\n")
 
-    def generate_token(self, input_ids, past_key_values: Optional[Dict] = None):
-        """Generate single token using OpenVINO model with KV cache"""
-        # Prepare inputs
-        inputs = self.prepare_inputs(input_ids, past_key_values=past_key_values)
-        
-        # Run forward pass
-        with torch.no_grad():
-            outputs = self.model(**inputs)
-        
-        # Get next token
-        logits = outputs.logits
-        next_token_logits = logits[0, -1, :]
-        
-        if self.do_sample:
-            # Apply temperature and top_p sampling
-            next_token_logits = next_token_logits / self.temperature
-            
-            if self.top_p < 1.0:
-                sorted_logits, sorted_indices = torch.sort(next_token_logits, descending=True)
-                cumulative_probs = torch.cumsum(torch.softmax(sorted_logits, dim=-1), dim=-1)
-                
-                # Remove tokens with cumulative probability above the threshold
-                sorted_indices_to_remove = cumulative_probs > self.top_p
-                sorted_indices_to_remove[1:] = sorted_indices_to_remove[:-1].clone()
-                sorted_indices_to_remove[0] = 0
-                
-                indices_to_remove = sorted_indices[sorted_indices_to_remove]
-                next_token_logits[indices_to_remove] = -float('Inf')
-            
-            # Sample from the filtered distribution
-            probs = torch.softmax(next_token_logits, dim=-1)
-            next_token_id = torch.multinomial(probs, num_samples=1).item()
-        else:
-            # Greedy decoding
-            next_token_id = torch.argmax(next_token_logits).item()
-        
-        # Extract new KV cache
-        new_kv_cache = outputs.past_key_values if hasattr(outputs, 'past_key_values') else None
-        
+        # print(f"DEBUG past_key_values: outputs.past_key_values {outputs.past_key_values}")
+        logits = outputs.logits if hasattr(outputs, "logits") else outputs[0]
+        next_token_logits = logits[:, -1, :]
+        # print(f"DEBUG generate_token: next_token_logits: {next_token_logits}\n")
+        next_token_id = int(np.argmax(next_token_logits, axis=-1)[0])
+        new_kv_cache = self.extract_kv_cache(outputs)
+        # print(f"DEBUG generate_token: next_token_id: {next_token_id}\n")
+        # print(f"DEBUG generate_token: new_kv_cache: {new_kv_cache}\n")
         return next_token_id, new_kv_cache
 
-    def generate_with_kv_cache(self, prompt: str, max_new_tokens: int = None) -> str:
-        """Generate text using OpenVINO model with manual KV cache management
-        
-        Args:
-            prompt (str): Input prompt
-            max_new_tokens (int): Maximum number of tokens to generate
-            
-        Returns:
-            str: Generated text
+    def generate_content(self, prompt: str | list[dict[str, str]]) -> str:
         """
-        if max_new_tokens is None:
-            max_new_tokens = self.max_new_tokens
-            
-        logger.info(f"Generating with OpenVINO KV cache: '{prompt[:50]}...' (max_tokens: {max_new_tokens})")
-        
-        # Import torch here to avoid dependency issues
-        try:
-            import torch
-        except ImportError:
-            raise ImportError("PyTorch is required for manual KV cache generation")
-        
-        # Tokenize
-        input_ids = self.tokenizer.encode(prompt, return_tensors="pt")
+        Generate text with KV cache, supporting:
+        - str: plain prompt
+        - list[dict[str, str]]: chat-style messages
+        """
+        # If the input is chat-style, convert to prompt text
+        if isinstance(prompt, list) and all(isinstance(m, dict) and "role" in m and "content" in m for m in prompt):
+            prompt_text = self.tokenizer.apply_chat_template(
+                prompt,
+                tokenize=False,
+                add_generation_prompt=True
+            )
+        elif isinstance(prompt, str):
+            prompt_text = prompt
+        else:
+            raise ValueError("Prompt must be a string or a list of {role, content} dicts.")
+
+        logger.info(f"Generating with OpenVINO: '{prompt_text[:50]}...'")
+
+        # Tokenize prompt
+        input_ids = self.tokenizer.encode(prompt_text, return_tensors="np")
+        # print(f"DEBUG: input_ids {input_ids}")
         prompt_tokens = input_ids.shape[1]
-        
         generated_tokens = []
         kv_cache = None
-        
-        t0 = time.perf_counter()
-        
-        # Generation loop
-        for step in range(max_new_tokens):
-            if step == 0:
-                current_input = input_ids
-            else:
-                current_input = torch.tensor([[generated_tokens[-1]]], dtype=torch.long)
-            
-            try:
-                next_token_id, kv_cache = self.generate_token(
-                    current_input, 
-                    past_key_values=kv_cache
-                )
-                
-                generated_tokens.append(next_token_id)
-                
-                # Check for EOS
-                if next_token_id == self.tokenizer.eos_token_id:
-                    break
-                    
-            except Exception as e:
-                logger.error(f"Error at step {step}: {e}")
-                break
 
+        t0 = time.perf_counter()
+        for step in range(self.max_new_tokens):
+            step_input = (
+                input_ids if step == 0 
+                else np.array([[generated_tokens[-1]]], dtype=np.int64)
+            )
+            # print(f"DEBUG: step input {step_input}")
+            next_token_id, kv_cache = self.generate_token(step_input, kv_cache)
+            # print(f"DEBUG: next token id {next_token_id}, kv_cache {kv_cache}")
+            generated_tokens.append(next_token_id)
+
+            if next_token_id == self.tokenizer.eos_token_id:
+                break
         t1 = time.perf_counter()
-        elapsed = max(t1 - t0, 1e-9)  # guard div-by-zero
-        
-        # Decode generated text
+
         generated_text = self.tokenizer.decode(generated_tokens, skip_special_tokens=True)
-        
+        print(f"DEBUG generated_text {generated_text}")
         completion_tokens = len(generated_tokens)
         total_tokens = prompt_tokens + completion_tokens
-        tps = completion_tokens / elapsed
+        tps = completion_tokens / (t1 - t0 + 1e-9)
 
-        logger.info(f"Generated {completion_tokens} tokens in {elapsed:.3f}s "
-                   f"({tps:.2f} tok/s) | prompt={prompt_tokens}, total={total_tokens}")
-
-        return generated_text
-
-    # ------------------ Original Generation Methods ------------------
-
-    def run_batch_generate(self, texts):
-        # texts: list[str]
-        inputs = self.tokenizer(texts, return_tensors="pt", padding=True).to(self.device)  # pad to max in batch
-        input_lens = inputs["attention_mask"].sum(dim=1).tolist()      # original token lengths per item
-        
-        # generate (works with batched inputs)
-        generated = self.model.generate(
-            **inputs,
-            max_new_tokens=self.max_new_tokens,
-            do_sample=self.do_sample,
-            temperature=self.temperature,
-            top_p=self.top_p,
-            pad_token_id=self.tokenizer.eos_token_id,
-            eos_token_id=self.tokenizer.eos_token_id,
-            use_cache=self.use_cache
+        logger.info(
+            f"Generated {completion_tokens} tokens in {(t1-t0):.3f}s "
+            f"({tps:.2f} tok/s) | prompt={prompt_tokens}, total={total_tokens}"
         )
-        generated_tokens = generated.shape[1] - inputs["input_ids"].shape[1]
-        # produced shape: (batch_size, seq_len_total)
-        responses = []
-        for i, seq in enumerate(generated):
-            orig_len = int(input_lens[i])
-            new_tokens = seq[orig_len:].tolist()   # slice new tokens for this sample
-            responses.append(self.tokenizer.decode(new_tokens, skip_special_tokens=True))
-        return responses, generated_tokens
-    
-
-    def generate_content(
-        self,
-        prompts: list[list[dict[str, str]]] | list[dict[str, str]],
-        use_manual_kv_cache: bool = False
-    ) -> List[str]:
-        """Generate outputs for a batch of prompts.
-
-        Args:
-            prompts: list of prompt strings or list of conversation message-lists/dicts
-            use_manual_kv_cache: whether to use manual KV cache implementation
-        Returns:
-            list of generated strings (one per prompt)
-        """
-        
-        if use_manual_kv_cache:
-            # Use manual KV cache for single prompt generation
-            if isinstance(prompts, list) and len(prompts) == 1:
-                if isinstance(prompts[0], list):
-                    text = self.tokenizer.apply_chat_template(
-                        prompts[0],
-                        tokenize=False,
-                        add_generation_prompt=True,
-                        enable_thinking=False
-                    )
-                else:
-                    text = self.tokenizer.apply_chat_template(
-                        prompts,
-                        tokenize=False,
-                        add_generation_prompt=True,
-                        enable_thinking=False
-                    )
-                generated_text = self.generate_with_kv_cache(text)
-                return [generated_text]
-
-        batch_texts = []
-        total_time = 0.0
-        results = []
-        total_generated_tokens = 0
-        
-        if prompts and isinstance(prompts[0], list):
-            for prompt in prompts:
-                batch_texts.append(self.tokenizer.apply_chat_template(
-                                    prompt,
-                                    tokenize=False,
-                                    add_generation_prompt=True,
-                                    enable_thinking=False
-                                    ))
-                if len(batch_texts) >= self.batch_size:
-                    start = time.time()
-                    responses, generated_tokens = self.run_batch_generate(batch_texts)
-                    elapsed = time.time() - start
-                    total_time += elapsed
-                    total_generated_tokens += generated_tokens
-
-                    for resp in responses:
-                        results.append(resp)
-                    batch_texts = []
-            if batch_texts:
-                start = time.time()
-                responses, generated_tokens = self.run_batch_generate(batch_texts)
-                elapsed = time.time() - start
-                total_time += elapsed
-                total_generated_tokens += generated_tokens
-                for resp in responses:
-                    results.append(resp)
-            self.tok_per_sec = total_generated_tokens / total_time
-        else:
-            text = self.tokenizer.apply_chat_template(
-                    prompts,
-                    tokenize=False,
-                    add_generation_prompt=True,
-                    enable_thinking=False
-                    )
-            start = time.time()
-            responses, generated_tokens = self.run_batch_generate([text])
-            elapsed = time.time() - start
-            total_time += elapsed
-            total_generated_tokens += generated_tokens
-
-            for resp in responses:
-                results.append(resp)
-            self.tok_per_sec = total_generated_tokens / total_time
-
-        return results
-
-    def get_tokens_per_sec(self):
-        return getattr(self, 'tok_per_sec', 0)
-
-    def get_model_info(self) -> Dict:
-        """Get model information"""
-        return {
-            "model_version": self.model_version,
-            "num_layers": self.num_layers,
-            "num_heads": self.num_heads,
-            "head_dim": self.head_dim,
-            "vocab_size": self.tokenizer.vocab_size,
-            "device": self.device,
-            "use_kv_cache": self.use_kv_cache
-        }
+        return generated_text
 
     def warmup(self, steps: int = 3):
         example = {"role":"user", "content":"Hello"}
