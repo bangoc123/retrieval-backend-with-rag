@@ -4,8 +4,19 @@ from typing import List, Dict
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
 from llms.onnx import ONNXModel
+from llms.OpenVino import OpenVINO
 class LocalLLMs:
-    def __init__(self, engine: str, model_version: str, base_url: str = None, **kwargs):
+    def __init__(self, 
+                 engine: str, 
+                 model_version: str, 
+                 base_url: str = None, 
+                 device: str = 'cpu', 
+                 temperature: float = 0.7,
+                 top_p: float = 0.9,
+                 do_sample: bool = True,
+                 use_cache: bool = True,
+                 batch_size: int = 1,
+                 **kwargs):
         """ Initialize the LocalLLMs class 
             Args:
             engine (str): "ollama" or "vllm".
@@ -15,7 +26,13 @@ class LocalLLMs:
         self.engine = engine
         self.model_version = model_version
         self.client = None
+        self.batch_size = batch_size
         self.max_tokens = kwargs.get('max_tokens', 4096)  # Default max tokens
+        self.device = device
+        self.temperature = temperature
+        self.top_p = top_p 
+        self.do_sample = do_sample 
+        self.use_cache = use_cache
         if engine == "ollama":
             self.base_url = base_url 
             self._initialize_ollama_model(model_version)
@@ -28,6 +45,9 @@ class LocalLLMs:
             self.client = self.onnx_model
         elif engine == "huggingface":
             self._initialize_huggingface_model(model_version)
+        elif engine == "openvino":
+            self._initialize_openvino_model(model_version)
+            self.client = self.openvino_model
         else:
             raise ValueError(f"Unsupported engine: {engine}")
 
@@ -103,6 +123,16 @@ class LocalLLMs:
         ).to(device)
         self.client.eval()
 
+    def _initialize_openvino_model(self, model_version: str):
+        self.openvino_model = OpenVINO(model_version=model_version, 
+                                       device=self.device,
+                                       batch_size=self.batch_size,
+                                       max_new_tokens=self.max_tokens,
+                                       temperature=self.temperature,
+                                       top_p=self.top_p,
+                                       do_sample=self.do_sample,
+                                       use_cache=False)
+        self.openvino_model.warmup()
     def remove_think_blocks(self,text):
         """Remove <think> blocks and their content from text"""
         # Pattern to match <think>...</think> blocks (including multiline)
@@ -170,12 +200,12 @@ class LocalLLMs:
                     generated_ids = self.client.generate(
                         **model_inputs,
                         max_new_tokens=self.max_tokens,
-                        do_sample=True,
-                        temperature=0.7,
-                        top_p=0.9,
+                        do_sample=self.do_sample,
+                        temperature=self.temperature,
+                        top_p=self.top_p,
                         pad_token_id=self.tokenizer.eos_token_id,
                         eos_token_id=self.tokenizer.eos_token_id,
-                        use_cache=True
+                        use_cache=self.use_cache
                     )
                 output_ids = generated_ids[0][len(model_inputs.input_ids[0]):].tolist() 
 
@@ -198,6 +228,13 @@ class LocalLLMs:
                 
                 output = self.onnx_model.generate(prompt_text)
                 return self.remove_think_blocks(output)
+            elif self.engine == "openvino":
+                output = self.openvino_model.generate_content(prompt)
+                if self.batch_size == 1:
+                    return self.remove_think_blocks(output[0])
+                else: 
+                    return output
+
 
         except Exception as e:
             print(f"Đã xảy ra lỗi trong quá trình tạo nội dung: {e}")

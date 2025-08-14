@@ -103,6 +103,9 @@ def main(args):
         MODEL_BASE_URL = None
         # if not MODEL_BASE_URL:
         #     raise URLNotFoundError("VLLM_BASE_URL or OLLAMA_BASE_URL")
+    elif args.mode == "offline" and args.model_engine == "openvino":
+        MODEL_API_KEY = None
+        MODEL_BASE_URL = None
     else:
         raise ValueError(f"Unsupported model engine: {args.model_engine}")
 
