@@ -93,18 +93,12 @@ def main(args):
 
         if not MODEL_BASE_URL:
             raise URLNotFoundError("VLLM_BASE_URL")
-        
-    elif args.mode == "offline" and args.model_engine == "onnx":
-        MODEL_BASE_URL = None
-        MODEL_API_KEY = None
 
     elif args.mode == "offline" and args.model_engine == "huggingface":
         MODEL_API_KEY = None
         MODEL_BASE_URL = None
         # if not MODEL_BASE_URL:
         #     raise URLNotFoundError("VLLM_BASE_URL or OLLAMA_BASE_URL")
-    else:
-        raise ValueError(f"Unsupported model engine: {args.model_engine}")
 
     llm = LLMs(type=args.mode, model_version=args.model_version, model_name=args.model_name, engine=args.model_engine, base_url=MODEL_BASE_URL, api_key=MODEL_API_KEY)
 
@@ -211,18 +205,6 @@ def main(args):
 
     @app.route('/api/search', methods=['POST'])
     def handle_query():
-
-        print("\n🚀 Starting RAG Server with the following setup:")
-        print("===============================================")
-        print(f"🔧 Mode: {args.mode}")
-        print(f"🤖 Model Name: {args.model_name}")
-        print(f"🛠️ Model Engine: {args.model_engine}")
-        print(f"📦 Model Version: {args.model_version}")
-        print(f"🧠 Embedding Model: {args.embedding_model}")
-        print(f"📊 Reranker Model: {args.reranker}")
-        print(f"🗃️ Vector DB: {args.db}")
-
-        
         data = list(request.get_json())
 
         reflected_query = reflection(data)
